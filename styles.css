@@ -551,6 +551,26 @@ textarea:focus {
   gap: 8px;
 }
 
+.client-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.avatar-stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.avatar-stack .owner-avatar + .owner-avatar {
+  margin-left: -7px;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
 .process-topline,
 .role-topline {
   display: flex;
@@ -835,6 +855,61 @@ dialog::backdrop {
 .template-actions .ghost-button {
   min-height: 34px;
   padding: 0 10px;
+}
+
+.client-demand-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.panel-header.compact {
+  margin: 0;
+}
+
+.panel-header.compact h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.client-demand-list {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.client-demand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 10px;
+  color: var(--text);
+  text-align: left;
+}
+
+.client-demand-row strong,
+.client-demand-row small {
+  display: block;
+}
+
+.client-demand-row small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.empty-state.compact {
+  min-height: 76px;
 }
 
 .checkbox-row {

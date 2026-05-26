@@ -19,6 +19,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "yasmin", "meriduarda"],
     services: ["Social media", "Captacao", "Trafego pago"],
     notes: "Cliente aprova tudo pelo WhatsApp.",
   },
@@ -28,6 +29,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "meriduarda"],
     services: ["Social media", "8 conteudos/mensal", "Captacao 1h30", "Relatorio mensal"],
     notes: "Contrato de gestao de redes sociais. Primeiro mes focado em planejamento, organizacao dos perfis e comunicacao. Modelo sem repasse financeiro direto entre as partes.",
   },
@@ -37,6 +39,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "meriduarda"],
     services: ["Social media", "8 conteudos/mensal", "Captacao 1h30", "Relatorio mensal"],
     notes: "Contrato de gestao de redes sociais. Primeiro mes de estruturacao e planejamento. Modelo sem repasse financeiro direto entre as partes.",
   },
@@ -46,6 +49,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura"],
     services: ["Social media", "7 postagens/mensal", "Conteudo enviado pelo cliente", "Relatorio mensal"],
     notes: "Cliente depende do envio de fotos e videos para continuidade do processo. Inclui estruturacao de perfil, estrategia mensal, edicao, agendamento e direcionamento de comunicacao.",
   },
@@ -55,6 +59,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "yasmin", "meriduarda"],
     services: ["Social media", "10 conteudos/mensal", "Captacao 2h", "Trafego a partir do 2 mes"],
     notes: "Pacote robusto com planejamento, edicao, agendamento, relatorio a partir do segundo mes e gestao de trafego pago. Vencimento dia 05.",
   },
@@ -64,6 +69,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "yasmin", "meriduarda"],
     services: ["Social media", "8 conteudos/mensal", "Captacao 2h", "Trafego a partir do 3 mes"],
     notes: "Primeiro mes de estruturacao. Inclui relatorio a partir do segundo mes e trafego pago a partir do terceiro mes. Vencimento dia 05.",
   },
@@ -73,6 +79,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "meriduarda"],
     services: ["Social media", "6 posts no 1 mes", "10 posts depois", "Captacao a partir do 3 mes"],
     notes: "Contrato com evolucao de escopo por fase: primeiro mes menor, depois aumento de volume e captacao mobile mensal. Vencimento dia 18.",
   },
@@ -82,6 +89,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "yasmin", "meriduarda"],
     services: ["Social media", "8 postagens/mensal", "Captacao 1h30/2h", "Trafego pontual"],
     notes: "Captacao de 1h30 nos dois primeiros meses e depois 2h. Trafego pago pontual nos dois primeiros meses. Vencimento dia 25.",
   },
@@ -91,6 +99,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "meriduarda"],
     services: ["Social media", "8 postagens/mensal", "Captacao 1h30", "Relatorio mensal"],
     notes: "Gestao estrategica de Instagram com reestruturacao de perfil, planejamento, edicao, captacao mensal, relatorio e agendamento. Vencimento dia 19.",
   },
@@ -100,6 +109,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "yasmin", "meriduarda"],
     services: ["Social media", "4 conteudos/mensal", "Captacao 2h", "Trafego a partir do 3 mes"],
     notes: "Pacote enxuto com captacao mensal, roteiro, edicao, artes, legendas, agendamento e relatorio. Trafego pago entra a partir do terceiro mes. Vencimento dia 20.",
   },
@@ -109,6 +119,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "meriduarda",
     financeStatus: "Regular",
+    memberIds: ["isabela", "meriduarda"],
     services: ["Videomaker mobile", "1 captacao/mensal", "2 videos editados", "Roteirizacao"],
     notes: "Cliente Luiz. Fluxo separado de social media completo: captacao de ate 1h, direcionamento estrategico, roteirizacao e edicao de 2 videos captados. Vencimento dia 05.",
   },
@@ -118,6 +129,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "yasmin", "meriduarda"],
     services: ["Social media", "10 conteudos/mensal", "2 perfis", "Trafego pago"],
     notes: "Cliente Madu. Alta carga operacional: dois perfis, captacao ate 2h, roteiros, edicao, artes, agendamento, relatorio e gestao de trafego pago. Vencimento dia 10.",
   },
@@ -127,6 +139,7 @@ const clientsSeed = [
     status: "Ativo",
     ownerId: "laura",
     financeStatus: "Regular",
+    memberIds: ["isabela", "laura", "meriduarda"],
     services: ["Social media", "4 conteudos/mensal", "Captacao 1h", "Relatorio mensal"],
     notes: "Pacote enxuto com planejamento, roteiro, edicao, artes, legendas, agendamento, relatorio e atendimento por WhatsApp. Vencimento dia 25.",
   },
@@ -910,6 +923,9 @@ const elements = {
   clientFinanceStatus: document.querySelector("#clientFinanceStatus"),
   clientServices: document.querySelector("#clientServices"),
   clientNotes: document.querySelector("#clientNotes"),
+  clientProjectPeople: document.querySelector("#clientProjectPeople"),
+  clientDemandList: document.querySelector("#clientDemandList"),
+  addClientDemandButton: document.querySelector("#addClientDemandButton"),
   deleteClientButton: document.querySelector("#deleteClientButton"),
   cycleDialog: document.querySelector("#cycleDialog"),
   cycleForm: document.querySelector("#cycleForm"),
@@ -981,15 +997,30 @@ function normalizePerson(person) {
 }
 
 function normalizeClient(client) {
+  const services = Array.isArray(client.services) ? client.services : String(client.services || "").split("\n").filter(Boolean);
   return {
     id: client.id || crypto.randomUUID(),
     name: client.name || "Cliente sem nome",
     status: client.status || "Ativo",
     ownerId: client.ownerId || peopleSeed[0].id,
     financeStatus: client.financeStatus || "Regular",
-    services: Array.isArray(client.services) ? client.services : String(client.services || "").split("\n").filter(Boolean),
+    memberIds: normalizeClientMemberIds(client.memberIds, client.ownerId, services),
+    services,
     notes: client.notes || "",
   };
+}
+
+function normalizeClientMemberIds(memberIds, ownerId, services = []) {
+  const ids = Array.isArray(memberIds) ? memberIds.filter(Boolean) : [];
+  const owner = ownerId || peopleSeed[0].id;
+  const serviceText = services.join(" ").toLowerCase();
+
+  if (!ids.length) ids.push(owner);
+  if (/social|conteudo|post|relatorio/.test(serviceText)) ids.push("isabela", "laura");
+  if (/captacao|video|videomaker|reels/.test(serviceText)) ids.push("meriduarda");
+  if (/trafego|ads|campanha/.test(serviceText)) ids.push("yasmin");
+
+  return [...new Set(ids)];
 }
 
 function normalizeDemand(demand) {
@@ -1024,6 +1055,12 @@ function getOwner(ownerId) {
 
 function getClient(clientId) {
   return state.clients?.find((client) => client.id === clientId);
+}
+
+function getClientMembers(client) {
+  return (client?.memberIds || [])
+    .map((personId) => getOwner(personId))
+    .filter(Boolean);
 }
 
 function findClientIdByName(name = "") {
@@ -1086,12 +1123,21 @@ function getVisibleClients() {
 
   return state.clients.filter((client) => {
     const owner = getOwner(client.ownerId);
+    const members = getClientMembers(client);
     const personMatch = selectedPersonId === "todos" || client.ownerId === selectedPersonId;
-    const searchText = [client.name, client.status, client.financeStatus, owner?.name, client.notes, ...(client.services || [])]
+    const searchText = [
+      client.name,
+      client.status,
+      client.financeStatus,
+      owner?.name,
+      client.notes,
+      ...(client.services || []),
+      ...members.map((person) => person.name),
+    ]
       .join(" ")
       .toLowerCase();
 
-    return personMatch && searchText.includes(search);
+    return (personMatch || members.some((person) => person.id === selectedPersonId)) && searchText.includes(search);
   });
 }
 
@@ -1105,13 +1151,16 @@ function render() {
 }
 
 function renderPeople() {
-  const allCount = selectedView === "processes" ? state.processes.length : state.demands.length;
+  const allCount =
+    selectedView === "processes" ? state.processes.length : selectedView === "clients" ? state.clients.length : state.demands.length;
   const rows = [
     personButtonTemplate({ id: "todos", name: "Toda a equipe", role: "Visao geral", color: "#202124" }, allCount),
     ...state.people.map((person) => {
       const count =
         selectedView === "processes"
           ? state.processes.filter((process) => process.ownerId === person.id).length
+          : selectedView === "clients"
+            ? state.clients.filter((client) => client.ownerId === person.id || client.memberIds?.includes(person.id)).length
           : state.demands.filter((demand) => demand.ownerId === person.id).length;
       return personButtonTemplate(person, count);
     }),
@@ -1384,10 +1433,21 @@ function renderClients() {
 
 function clientCardTemplate(client) {
   const owner = getOwner(client.ownerId);
+  const members = getClientMembers(client);
   const demandCount = state.demands.filter((demand) => demand.clientId === client.id).length;
   const services = (client.services || []).slice(0, 4).map((service) => `<span class="tag">${escapeHtml(service)}</span>`).join("");
   const statusClass = client.status === "Ativo" ? "low" : client.status === "Inativo" ? "high" : "medium";
   const financeClass = client.financeStatus === "Regular" ? "low" : "high";
+  const memberAvatars = members
+    .slice(0, 5)
+    .map(
+      (person) => `
+        <span class="owner-avatar" style="background:${person.color}" title="${escapeHtml(person.name)}">
+          ${getInitials(person.name)}
+        </span>
+      `,
+    )
+    .join("");
 
   return `
     <button class="client-card" type="button" data-id="${client.id}">
@@ -1398,6 +1458,10 @@ function clientCardTemplate(client) {
       <h3>${escapeHtml(client.name)}</h3>
       <p>${escapeHtml(client.notes || "Sem observacoes")}</p>
       <div class="tag-row">${services}</div>
+      <div class="client-team">
+        <span>Projeto</span>
+        <span class="avatar-stack">${memberAvatars || "Sem equipe"}</span>
+      </div>
       <div class="card-footer">
         <span class="owner-pill">
           <span class="owner-avatar" style="background:${owner?.color || "#202124"}">${getInitials(owner?.name)}</span>
@@ -1612,18 +1676,23 @@ function openPersonDialog(personId = "") {
   elements.personDialog.showModal();
 }
 
-function openDemandDialog(demandId = "") {
+function openDemandDialog(demandId = "", presetClientId = "") {
   if (!state.people.length) {
     openPersonDialog();
     return;
   }
 
   const demand = state.demands.find((item) => item.id === demandId);
+  const presetClient = getClient(presetClientId);
+  const defaultOwnerId =
+    presetClient?.memberIds?.[0] ||
+    presetClient?.ownerId ||
+    (selectedPersonId !== "todos" ? selectedPersonId : state.people[0].id);
   elements.demandForm.reset();
   elements.demandId.value = demand?.id || "";
   elements.demandTitle.value = demand?.title || "";
-  elements.demandClient.value = demand?.clientId || findClientIdByName(demand?.client) || state.clients[0]?.id || "";
-  elements.demandOwner.value = demand?.ownerId || (selectedPersonId !== "todos" ? selectedPersonId : state.people[0].id);
+  elements.demandClient.value = demand?.clientId || findClientIdByName(demand?.client) || presetClientId || state.clients[0]?.id || "";
+  elements.demandOwner.value = demand?.ownerId || defaultOwnerId;
   elements.demandStatus.value = demand?.status || "Backlog";
   elements.demandPriority.value = demand?.priority || "Media";
   elements.demandProjectPriority.value = demand?.projectPriority || demand?.priority || "Media";
@@ -1652,9 +1721,67 @@ function openClientDialog(clientId = "") {
   elements.clientFinanceStatus.value = client?.financeStatus || "Regular";
   elements.clientServices.value = (client?.services || []).join("\n");
   elements.clientNotes.value = client?.notes || "";
+  renderClientProjectPeople(client);
+  renderClientDemandList(client?.id || "");
   elements.clientDialogTitle.textContent = client ? "Editar cliente" : "Novo cliente";
   elements.deleteClientButton.hidden = !client;
+  elements.addClientDemandButton.disabled = !client;
   elements.clientDialog.showModal();
+}
+
+function renderClientProjectPeople(client) {
+  const selectedIds = new Set(client?.memberIds?.length ? client.memberIds : [client?.ownerId || state.people[0]?.id]);
+
+  elements.clientProjectPeople.innerHTML = state.people
+    .map(
+      (person) => `
+        <label class="person-check">
+          <input type="checkbox" value="${person.id}" ${selectedIds.has(person.id) ? "checked" : ""} />
+          <span class="owner-avatar" style="background:${person.color}">${getInitials(person.name)}</span>
+          <span>
+            <strong>${escapeHtml(person.name)}</strong>
+            <small>${escapeHtml(person.role)}</small>
+          </span>
+        </label>
+      `,
+    )
+    .join("");
+}
+
+function renderClientDemandList(clientId) {
+  const clientDemands = state.demands
+    .filter((demand) => demand.clientId === clientId)
+    .sort((a, b) => (a.status === "Concluido") - (b.status === "Concluido") || String(a.dueDate).localeCompare(String(b.dueDate)));
+
+  elements.clientDemandList.innerHTML = clientId
+    ? clientDemands.length
+      ? clientDemands.map(clientDemandRowTemplate).join("")
+      : `<div class="empty-state compact">Nenhuma demanda criada para este cliente.</div>`
+    : `<div class="empty-state compact">Salve o cliente para criar demandas pontuais.</div>`;
+
+  elements.clientDemandList.querySelectorAll("[data-client-demand-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      elements.clientDialog.close();
+      openDemandDialog(button.dataset.clientDemandId);
+    });
+  });
+}
+
+function clientDemandRowTemplate(demand) {
+  const owner = getOwner(demand.ownerId);
+  return `
+    <button class="client-demand-row" type="button" data-client-demand-id="${demand.id}">
+      <span>
+        <strong>${escapeHtml(demand.title)}</strong>
+        <small>${escapeHtml(owner?.name || "Sem responsavel")} - ${escapeHtml(demand.stage || demand.flowType)}</small>
+      </span>
+      <span class="tag ${getPriorityClass(demand.priority)}">${escapeHtml(demand.status)}</span>
+    </button>
+  `;
+}
+
+function getPriorityClass(priority) {
+  return priority === "Alta" ? "high" : priority === "Baixa" ? "low" : "medium";
 }
 
 function openCycleDialog() {
@@ -1796,12 +1923,15 @@ function saveDemand(event) {
 
 function saveClient(event) {
   event.preventDefault();
+  const selectedMemberIds = [...elements.clientProjectPeople.querySelectorAll("input:checked")].map((input) => input.value);
+  const ownerId = elements.clientOwner.value;
   const client = {
     id: elements.clientId.value || slugify(elements.clientName.value) || crypto.randomUUID(),
     name: elements.clientName.value.trim(),
     status: elements.clientStatus.value,
-    ownerId: elements.clientOwner.value,
+    ownerId,
     financeStatus: elements.clientFinanceStatus.value,
+    memberIds: [...new Set([ownerId, ...selectedMemberIds])],
     services: elements.clientServices.value
       .split("\n")
       .map((item) => item.trim())
@@ -1821,6 +1951,13 @@ function saveClient(event) {
 
   elements.clientDialog.close();
   render();
+}
+
+function openDemandFromClient() {
+  const clientId = elements.clientId.value;
+  if (!clientId) return;
+  elements.clientDialog.close();
+  openDemandDialog("", clientId);
 }
 
 function deleteClient() {
@@ -2149,8 +2286,9 @@ function importData(event) {
       }
 
       state = {
-        people: imported.people,
-        demands: imported.demands,
+        people: imported.people.map(normalizePerson),
+        clients: Array.isArray(imported.clients) ? imported.clients.map(normalizeClient) : clientsSeed,
+        demands: imported.demands.map(normalizeDemand),
         processes: Array.isArray(imported.processes) ? imported.processes : processesSeed,
         roles: Array.isArray(imported.roles) ? imported.roles : rolesSeed,
       };
@@ -2292,6 +2430,7 @@ elements.testCalendarSyncButton.addEventListener("click", () => {
 elements.addClientButton.addEventListener("click", () => openClientDialog());
 elements.clientForm.addEventListener("submit", saveClient);
 elements.deleteClientButton.addEventListener("click", deleteClient);
+elements.addClientDemandButton.addEventListener("click", openDemandFromClient);
 elements.generateCycleButton.addEventListener("click", openCycleDialog);
 elements.cycleForm.addEventListener("submit", generateCycleDemands);
 elements.addPersonButton.addEventListener("click", () => openPersonDialog());

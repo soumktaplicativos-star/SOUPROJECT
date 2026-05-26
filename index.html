@@ -369,6 +369,17 @@
           Observacoes
           <textarea id="clientNotes" rows="4" maxlength="700"></textarea>
         </label>
+        <label>
+          Pessoas no projeto
+          <div class="people-check-grid" id="clientProjectPeople"></div>
+        </label>
+        <section class="client-demand-panel">
+          <div class="panel-header compact">
+            <h3>Demandas do cliente</h3>
+            <button class="ghost-button" id="addClientDemandButton" type="button">Nova demanda pontual</button>
+          </div>
+          <div class="client-demand-list" id="clientDemandList"></div>
+        </section>
         <div class="modal-actions">
           <button class="ghost-button danger" id="deleteClientButton" type="button">Excluir</button>
           <button class="primary-button" value="default" type="submit">Salvar</button>
