@@ -63,6 +63,7 @@
             <input id="globalSearchMirror" type="search" placeholder="Buscar demanda, cliente, etapa..." />
           </div>
           <div class="topbar-actions">
+            <button class="ghost-button" id="exportCalendarButton" type="button">Exportar agenda</button>
             <button class="ghost-button" id="exportButton" type="button">Exportar</button>
             <label class="primary-button" for="importFile">Importar</label>
             <input id="importFile" type="file" accept="application/json" hidden />
@@ -101,6 +102,10 @@
         <label>
           Cargo ou area
           <input id="personRole" required maxlength="48" />
+        </label>
+        <label>
+          E-mail
+          <input id="personEmail" type="email" maxlength="90" placeholder="nome@empresa.com" />
         </label>
         <label>
           Cor
@@ -196,6 +201,14 @@
           <label>
             Entrega real
             <input id="demandDeliveredDate" type="date" />
+          </label>
+          <label>
+            Data na agenda
+            <input id="demandCalendarDate" type="date" />
+          </label>
+          <label>
+            Hora de inicio
+            <input id="demandStartTime" type="time" />
           </label>
           <label>
             Tempo previsto (h)

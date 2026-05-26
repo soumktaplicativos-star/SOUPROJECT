@@ -9,10 +9,12 @@ Abra o arquivo `index.html` no navegador.
 ## O que da para fazer
 
 - Cadastrar, editar e excluir colaboradores.
+- Registrar e-mail dos colaboradores para agenda.
 - Acompanhar um dashboard executivo da operacao.
 - Criar, editar e excluir demandas.
 - Ver demandas por colaborador ou pela equipe toda.
 - Registrar etapa, prazo, entrega real, tempo previsto e tempo gasto por demanda.
+- Registrar data e hora de agenda para cada demanda.
 - Medir saldo de horas para acompanhar produtividade por pessoa e etapa.
 - Arrastar demandas entre colunas no estilo Trello/Kanban.
 - Classificar demandas por prioridade de projeto e prioridade da tarefa.
@@ -22,6 +24,7 @@ Abra o arquivo `index.html` no navegador.
 - Filtrar por status e buscar por cliente, tarefa ou responsavel.
 - Acompanhar quantidade total, em andamento, aguardando e atrasadas.
 - Exportar os dados em JSON.
+- Exportar tarefas para Google Agenda em arquivo `.ics`, com duracao e participante por e-mail.
 - Importar um JSON exportado anteriormente.
 
 ## Onde os dados ficam salvos

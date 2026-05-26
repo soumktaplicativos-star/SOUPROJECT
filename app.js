@@ -2,13 +2,13 @@ const statuses = ["Backlog", "Em andamento", "Aguardando", "Concluido"];
 const storageKey = "sou-demandas-v1";
 
 const peopleSeed = [
-  { id: "isabela", name: "Isabela", role: "Direcao estrategica e gestao", color: "#1864ab" },
-  { id: "laura", name: "Laura", role: "Operacoes e atendimento", color: "#0ca678" },
-  { id: "yasmin", name: "Yasmin", role: "Trafego pago", color: "#f08c00" },
-  { id: "meriduarda", name: "Meriduarda", role: "Captacao de conteudo", color: "#c2255c" },
-  { id: "clarinha", name: "Clarinha", role: "Financeiro, juridico e formalizacoes", color: "#7048e8" },
-  { id: "comercial", name: "Comercial", role: "Futura contratacao", color: "#495057" },
-  { id: "estrategista", name: "Estrategista", role: "Futura roteirizacao", color: "#087f5b" },
+  { id: "isabela", name: "Isabela", role: "Direcao estrategica e gestao", email: "", color: "#1864ab" },
+  { id: "laura", name: "Laura", role: "Operacoes e atendimento", email: "", color: "#0ca678" },
+  { id: "yasmin", name: "Yasmin", role: "Trafego pago", email: "", color: "#f08c00" },
+  { id: "meriduarda", name: "Meriduarda", role: "Captacao de conteudo", email: "", color: "#c2255c" },
+  { id: "clarinha", name: "Clarinha", role: "Financeiro, juridico e formalizacoes", email: "", color: "#7048e8" },
+  { id: "comercial", name: "Comercial", role: "Futura contratacao", email: "", color: "#495057" },
+  { id: "estrategista", name: "Estrategista", role: "Futura roteirizacao", email: "", color: "#087f5b" },
 ];
 
 const processesSeed = [
@@ -421,6 +421,8 @@ const seedData = {
       stage: "Em cronograma",
       dueDate: "",
       deliveredDate: "",
+      calendarDate: "",
+      startTime: "09:00",
       estimatedHours: 3,
       actualHours: 0,
       checklist: checklistTemplates.monthly.slice(0, 6).map((text) => ({ text, done: false })),
@@ -438,6 +440,8 @@ const seedData = {
       stage: "Enviado para aprovacao",
       dueDate: "",
       deliveredDate: "",
+      calendarDate: "",
+      startTime: "09:00",
       estimatedHours: 1.5,
       actualHours: 0,
       checklist: checklistTemplates.team.slice(0, 5).map((text) => ({ text, done: false })),
@@ -455,6 +459,8 @@ const seedData = {
       stage: "Aguardando cliente",
       dueDate: "",
       deliveredDate: "",
+      calendarDate: "",
+      startTime: "09:00",
       estimatedHours: 2,
       actualHours: 0,
       checklist: checklistTemplates.team.slice(0, 4).map((text) => ({ text, done: false })),
@@ -488,6 +494,7 @@ const elements = {
   addProcessButton: document.querySelector("#addProcessButton"),
   addPersonButton: document.querySelector("#addPersonButton"),
   exportButton: document.querySelector("#exportButton"),
+  exportCalendarButton: document.querySelector("#exportCalendarButton"),
   importFile: document.querySelector("#importFile"),
   personDialog: document.querySelector("#personDialog"),
   personForm: document.querySelector("#personForm"),
@@ -495,6 +502,7 @@ const elements = {
   personId: document.querySelector("#personId"),
   personName: document.querySelector("#personName"),
   personRole: document.querySelector("#personRole"),
+  personEmail: document.querySelector("#personEmail"),
   personColor: document.querySelector("#personColor"),
   deletePersonButton: document.querySelector("#deletePersonButton"),
   demandDialog: document.querySelector("#demandDialog"),
@@ -511,6 +519,8 @@ const elements = {
   demandStage: document.querySelector("#demandStage"),
   demandDueDate: document.querySelector("#demandDueDate"),
   demandDeliveredDate: document.querySelector("#demandDeliveredDate"),
+  demandCalendarDate: document.querySelector("#demandCalendarDate"),
+  demandStartTime: document.querySelector("#demandStartTime"),
   demandEstimatedHours: document.querySelector("#demandEstimatedHours"),
   demandActualHours: document.querySelector("#demandActualHours"),
   demandDescription: document.querySelector("#demandDescription"),
@@ -547,7 +557,7 @@ function loadState() {
     if (!Array.isArray(parsed.people) || !Array.isArray(parsed.demands)) return structuredClone(seedData);
 
     return {
-      people: parsed.people.length ? parsed.people : peopleSeed,
+      people: parsed.people.length ? parsed.people.map(normalizePerson) : peopleSeed,
       demands: parsed.demands.map(normalizeDemand),
       processes: Array.isArray(parsed.processes) ? parsed.processes : processesSeed,
       roles: Array.isArray(parsed.roles) ? parsed.roles : rolesSeed,
@@ -561,11 +571,20 @@ function saveState() {
   localStorage.setItem(storageKey, JSON.stringify(state));
 }
 
+function normalizePerson(person) {
+  return {
+    ...person,
+    email: person.email || "",
+  };
+}
+
 function normalizeDemand(demand) {
   return {
     ...demand,
     projectPriority: demand.projectPriority || demand.priority || "Media",
     flowType: demand.flowType || "Ciclo mensal",
+    calendarDate: demand.calendarDate || "",
+    startTime: demand.startTime || "09:00",
     checklist: normalizeChecklist(demand.checklist),
   };
 }
@@ -940,6 +959,11 @@ function demandCardTemplate(demand) {
   const checklist = normalizeChecklist(demand.checklist);
   const doneItems = checklist.filter((item) => item.done).length;
   const checklistText = checklist.length ? `${doneItems}/${checklist.length}` : "0/0";
+  const calendarText = demand.calendarDate
+    ? `${formatDate(demand.calendarDate)} ${demand.startTime || "09:00"}`
+    : demand.dueDate
+      ? `Prazo ${formatDate(demand.dueDate)}`
+      : "Sem agenda";
 
   return `
     <button class="demand-card" type="button" draggable="true" data-id="${demand.id}">
@@ -958,7 +982,7 @@ function demandCardTemplate(demand) {
         <span class="tag ${priorityClass}">Tarefa ${demand.priority}</span>
         <span class="tag">${escapeHtml(demand.flowType || "Ciclo mensal")}</span>
         <span class="tag">${escapeHtml(demand.stage || "Sem etapa")}</span>
-        <span class="tag">${dueDate}</span>
+        <span class="tag">${calendarText}</span>
       </div>
       <div class="card-footer">
         <span class="tag">Checklist ${checklistText}</span>
@@ -1079,6 +1103,7 @@ function openPersonDialog(personId = "") {
   elements.personId.value = person?.id || "";
   elements.personName.value = person?.name || "";
   elements.personRole.value = person?.role || "";
+  elements.personEmail.value = person?.email || "";
   elements.personColor.value = person?.color || "#2f80ed";
   elements.personDialogTitle.textContent = person ? "Editar colaborador" : "Novo colaborador";
   elements.deletePersonButton.hidden = !person;
@@ -1104,6 +1129,8 @@ function openDemandDialog(demandId = "") {
   elements.demandStage.value = demand?.stage || "Ideia";
   elements.demandDueDate.value = demand?.dueDate || "";
   elements.demandDeliveredDate.value = demand?.deliveredDate || "";
+  elements.demandCalendarDate.value = demand?.calendarDate || "";
+  elements.demandStartTime.value = demand?.startTime || "09:00";
   elements.demandEstimatedHours.value = demand?.estimatedHours ?? "";
   elements.demandActualHours.value = demand?.actualHours ?? "";
   elements.demandDescription.value = demand?.description || "";
@@ -1158,6 +1185,7 @@ function savePerson(event) {
     id: elements.personId.value || crypto.randomUUID(),
     name: elements.personName.value.trim(),
     role: elements.personRole.value.trim(),
+    email: elements.personEmail.value.trim(),
     color: elements.personColor.value,
   };
 
@@ -1207,6 +1235,8 @@ function saveDemand(event) {
     stage: elements.demandStage.value,
     dueDate: elements.demandDueDate.value,
     deliveredDate: elements.demandDeliveredDate.value,
+    calendarDate: elements.demandCalendarDate.value,
+    startTime: elements.demandStartTime.value || "09:00",
     estimatedHours: parseHours(elements.demandEstimatedHours.value),
     actualHours: parseHours(elements.demandActualHours.value),
     checklist: parseChecklistText(elements.demandChecklist.value),
@@ -1313,6 +1343,79 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
+function exportCalendar() {
+  const calendarDemands = state.demands
+    .map(normalizeDemand)
+    .filter((demand) => demand.calendarDate || demand.dueDate);
+  const skipped = state.demands.length - calendarDemands.length;
+
+  if (!calendarDemands.length) {
+    alert("Nenhuma demanda tem data de agenda ou prazo definido.");
+    return;
+  }
+
+  const events = calendarDemands.map((demand) => demandToIcsEvent(demand)).join("\r\n");
+  const content = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//SOU Marketing//SOU Ops//PT-BR",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    events,
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "sou-agenda-demandas.ics";
+  link.click();
+  URL.revokeObjectURL(url);
+
+  if (skipped) {
+    alert(`${calendarDemands.length} demandas exportadas. ${skipped} demandas ficaram de fora por falta de data.`);
+  }
+}
+
+function demandToIcsEvent(demand) {
+  const owner = getOwner(demand.ownerId);
+  const date = demand.calendarDate || demand.dueDate;
+  const startTime = demand.startTime || "09:00";
+  const durationHours = Number(demand.estimatedHours) || 1;
+  const start = createLocalDate(date, startTime);
+  const end = new Date(start.getTime() + durationHours * 60 * 60 * 1000);
+  const checklist = normalizeChecklist(demand.checklist);
+  const description = [
+    demand.description,
+    `Cliente: ${demand.client}`,
+    `Responsavel: ${owner?.name || "Sem responsavel"}`,
+    `Tipo: ${demand.flowType || "Ciclo mensal"}`,
+    `Etapa: ${demand.stage || "Sem etapa"}`,
+    `Prioridade do projeto: ${demand.projectPriority || "Media"}`,
+    `Tempo previsto: ${formatHours(durationHours)}h`,
+    checklist.length ? `Checklist:\\n${checklist.map((item) => `${item.done ? "[x]" : "[ ]"} ${item.text}`).join("\\n")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\\n");
+  const attendee = owner?.email
+    ? [`ATTENDEE;CN=${icsEscape(owner.name)};ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=FALSE:mailto:${owner.email}`]
+    : [];
+
+  return [
+    "BEGIN:VEVENT",
+    `UID:${demand.id}@sou-ops.local`,
+    `DTSTAMP:${formatIcsUtc(new Date())}`,
+    `DTSTART:${formatIcsLocal(start)}`,
+    `DTEND:${formatIcsLocal(end)}`,
+    `SUMMARY:${icsEscape(`${demand.client} - ${demand.title}`)}`,
+    `DESCRIPTION:${icsEscape(description)}`,
+    `CATEGORIES:${icsEscape(demand.flowType || "Demandas")}`,
+    ...attendee,
+    "END:VEVENT",
+  ].join("\r\n");
+}
+
 function importData(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1393,6 +1496,29 @@ function formatDate(value) {
   );
 }
 
+function createLocalDate(date, time) {
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  return new Date(year, month - 1, day, hour || 9, minute || 0, 0);
+}
+
+function formatIcsLocal(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}00`;
+}
+
+function formatIcsUtc(date) {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+function icsEscape(value = "") {
+  return String(value)
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+}
+
 function countBy(items, key) {
   return items.reduce((counts, item) => {
     const value = item[key] || "Sem etapa";
@@ -1452,6 +1578,7 @@ elements.globalSearchMirror.addEventListener("input", () => {
   render();
 });
 elements.exportButton.addEventListener("click", exportData);
+elements.exportCalendarButton.addEventListener("click", exportCalendar);
 elements.importFile.addEventListener("change", importData);
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
   button.addEventListener("click", () => {
