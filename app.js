@@ -12,6 +12,18 @@ const peopleSeed = [
   { id: "estrategista", name: "Estrategista", role: "Futura roteirizacao", email: "", color: "#087f5b" },
 ];
 
+const clientsSeed = [
+  {
+    id: "clinica-bella",
+    name: "Clinica Bella",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "Captacao", "Trafego pago"],
+    notes: "Cliente aprova tudo pelo WhatsApp.",
+  },
+];
+
 const processesSeed = [
   {
     id: "reuniao-mensal",
@@ -409,11 +421,13 @@ const checklistTemplates = {
 
 const seedData = {
   people: peopleSeed,
+  clients: clientsSeed,
   demands: [
     {
       id: crypto.randomUUID(),
       title: "Fechar cronograma mensal",
-      client: "Cliente Exemplo",
+      client: "Clinica Bella",
+      clientId: "clinica-bella",
       ownerId: "isabela",
       status: "Em andamento",
       priority: "Alta",
@@ -432,7 +446,8 @@ const seedData = {
     {
       id: crypto.randomUUID(),
       title: "Enviar conteudos para aprovacao",
-      client: "Marca Modelo",
+      client: "Clinica Bella",
+      clientId: "clinica-bella",
       ownerId: "laura",
       status: "Backlog",
       priority: "Media",
@@ -451,7 +466,8 @@ const seedData = {
     {
       id: crypto.randomUUID(),
       title: "Otimizar campanha Meta Ads",
-      client: "Loja Demo",
+      client: "Clinica Bella",
+      clientId: "clinica-bella",
       ownerId: "yasmin",
       status: "Aguardando",
       priority: "Alta",
@@ -481,6 +497,7 @@ let draggedDemandId = "";
 const elements = {
   personList: document.querySelector("#personList"),
   dashboardGrid: document.querySelector("#dashboardGrid"),
+  clientGrid: document.querySelector("#clientGrid"),
   board: document.querySelector("#board"),
   processGrid: document.querySelector("#processGrid"),
   roleGrid: document.querySelector("#roleGrid"),
@@ -492,6 +509,7 @@ const elements = {
   searchInput: document.querySelector("#searchInput"),
   globalSearchMirror: document.querySelector("#globalSearchMirror"),
   viewTabs: document.querySelectorAll("[data-view]"),
+  addClientButton: document.querySelector("#addClientButton"),
   addDemandButton: document.querySelector("#addDemandButton"),
   addProcessButton: document.querySelector("#addProcessButton"),
   addPersonButton: document.querySelector("#addPersonButton"),
@@ -555,6 +573,17 @@ const elements = {
   calendarWebhookUrl: document.querySelector("#calendarWebhookUrl"),
   calendarAutoSync: document.querySelector("#calendarAutoSync"),
   testCalendarSyncButton: document.querySelector("#testCalendarSyncButton"),
+  clientDialog: document.querySelector("#clientDialog"),
+  clientForm: document.querySelector("#clientForm"),
+  clientDialogTitle: document.querySelector("#clientDialogTitle"),
+  clientId: document.querySelector("#clientId"),
+  clientName: document.querySelector("#clientName"),
+  clientStatus: document.querySelector("#clientStatus"),
+  clientOwner: document.querySelector("#clientOwner"),
+  clientFinanceStatus: document.querySelector("#clientFinanceStatus"),
+  clientServices: document.querySelector("#clientServices"),
+  clientNotes: document.querySelector("#clientNotes"),
+  deleteClientButton: document.querySelector("#deleteClientButton"),
 };
 
 function loadState() {
@@ -567,6 +596,7 @@ function loadState() {
 
     return {
       people: parsed.people.length ? parsed.people.map(normalizePerson) : peopleSeed,
+      clients: Array.isArray(parsed.clients) ? parsed.clients.map(normalizeClient) : clientsSeed,
       demands: parsed.demands.map(normalizeDemand),
       processes: Array.isArray(parsed.processes) ? parsed.processes : processesSeed,
       roles: Array.isArray(parsed.roles) ? parsed.roles : rolesSeed,
@@ -603,9 +633,23 @@ function normalizePerson(person) {
   };
 }
 
+function normalizeClient(client) {
+  return {
+    id: client.id || crypto.randomUUID(),
+    name: client.name || "Cliente sem nome",
+    status: client.status || "Ativo",
+    ownerId: client.ownerId || peopleSeed[0].id,
+    financeStatus: client.financeStatus || "Regular",
+    services: Array.isArray(client.services) ? client.services : String(client.services || "").split("\n").filter(Boolean),
+    notes: client.notes || "",
+  };
+}
+
 function normalizeDemand(demand) {
   return {
     ...demand,
+    clientId: demand.clientId || findClientIdByName(demand.client),
+    client: demand.client || getClient(demand.clientId)?.name || "",
     projectPriority: demand.projectPriority || demand.priority || "Media",
     flowType: demand.flowType || "Ciclo mensal",
     calendarDate: demand.calendarDate || "",
@@ -631,17 +675,26 @@ function getOwner(ownerId) {
   return state.people.find((person) => person.id === ownerId);
 }
 
+function getClient(clientId) {
+  return state.clients?.find((client) => client.id === clientId);
+}
+
+function findClientIdByName(name = "") {
+  return state?.clients?.find((client) => client.name.toLowerCase() === String(name).toLowerCase())?.id || "";
+}
+
 function getVisibleDemands() {
   const status = elements.statusFilter.value;
   const search = elements.searchInput.value.trim().toLowerCase();
 
   return state.demands.filter((demand) => {
     const owner = getOwner(demand.ownerId);
+    const client = getClient(demand.clientId);
     const personMatch = selectedPersonId === "todos" || demand.ownerId === selectedPersonId;
     const statusMatch = status === "todos" || demand.status === status;
     const searchText = [
       demand.title,
-      demand.client,
+      client?.name || demand.client,
       owner?.name,
       demand.stage,
       demand.flowType,
@@ -679,6 +732,20 @@ function getVisibleProcesses() {
 
 function getVisibleRoles() {
   return state.roles.filter((role) => selectedPersonId === "todos" || role.personId === selectedPersonId);
+}
+
+function getVisibleClients() {
+  const search = elements.searchInput.value.trim().toLowerCase();
+
+  return state.clients.filter((client) => {
+    const owner = getOwner(client.ownerId);
+    const personMatch = selectedPersonId === "todos" || client.ownerId === selectedPersonId;
+    const searchText = [client.name, client.status, client.financeStatus, owner?.name, client.notes, ...(client.services || [])]
+      .join(" ")
+      .toLowerCase();
+
+    return personMatch && searchText.includes(search);
+  });
 }
 
 function render() {
@@ -733,27 +800,35 @@ function personButtonTemplate(person, count) {
 
 function renderOwnerOptions() {
   const options = state.people.map((person) => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
+  const clientOptions = state.clients
+    .map((client) => `<option value="${client.id}">${escapeHtml(client.name)}</option>`)
+    .join("");
   elements.demandOwner.innerHTML = options;
   elements.processOwner.innerHTML = options;
   elements.rolePersonSelect.innerHTML = options;
+  elements.clientOwner.innerHTML = options;
+  elements.demandClient.innerHTML = clientOptions;
 }
 
 function renderHeader() {
   const person = selectedPersonId === "todos" ? null : getOwner(selectedPersonId);
   const viewLabels = {
     dashboard: person ? "Resumo do colaborador" : "Visao geral da operacao",
+    clients: person ? "Clientes do colaborador" : "Carteira de clientes",
     demands: person ? "Demandas do colaborador" : "Todas as demandas",
     processes: person ? "Processos do colaborador" : "Processos da agencia",
     roles: person ? "Funcao do colaborador" : "Funcoes da equipe",
   };
   const viewTitles = {
     dashboard: person ? person.name : "Painel executivo",
+    clients: person ? person.name : "Clientes",
     demands: person ? person.name : "Painel da equipe",
     processes: person ? person.name : "Processos internos",
     roles: person ? person.name : "Responsabilidades",
   };
   const pageTitles = {
     dashboard: "Dashboard",
+    clients: "Clientes",
     demands: "Demandas",
     processes: "Processos",
     roles: "Funcoes",
@@ -762,6 +837,7 @@ function renderHeader() {
   elements.pageHeadline.textContent = pageTitles[selectedView];
   elements.selectedPersonLabel.textContent = viewLabels[selectedView];
   elements.workspaceTitle.textContent = viewTitles[selectedView];
+  elements.addClientButton.hidden = selectedView !== "clients";
   elements.addDemandButton.hidden = selectedView !== "demands";
   elements.addProcessButton.hidden = selectedView !== "processes";
 
@@ -782,6 +858,17 @@ function renderMetrics() {
       ["Concluidas", done],
       ["Uso do tempo", `${productivity}%`],
       ["Atrasadas", visible.filter((demand) => isOverdue(demand)).length],
+    ]);
+    return;
+  }
+
+  if (selectedView === "clients") {
+    const visible = getVisibleClients();
+    renderMetricItems([
+      ["Clientes", visible.length],
+      ["Ativos", visible.filter((client) => client.status === "Ativo").length],
+      ["Inativos", visible.filter((client) => client.status !== "Ativo").length],
+      ["Pendencias", visible.filter((client) => client.financeStatus !== "Regular").length],
     ]);
     return;
   }
@@ -827,11 +914,13 @@ function renderMetricItems(metricItems) {
 
 function renderMainView() {
   elements.dashboardGrid.hidden = selectedView !== "dashboard";
+  elements.clientGrid.hidden = selectedView !== "clients";
   elements.board.hidden = selectedView !== "demands";
   elements.processGrid.hidden = selectedView !== "processes";
   elements.roleGrid.hidden = selectedView !== "roles";
 
   if (selectedView === "dashboard") renderDashboard();
+  if (selectedView === "clients") renderClients();
   if (selectedView === "demands") renderBoard();
   if (selectedView === "processes") renderProcesses();
   if (selectedView === "roles") renderRoles();
@@ -923,13 +1012,52 @@ function workloadRowTemplate(item, maxWorkload) {
 
 function deadlineCardTemplate(demand) {
   const owner = getOwner(demand.ownerId);
+  const client = getClient(demand.clientId);
   const late = isOverdue(demand) ? " high" : "";
   return `
     <div class="deadline-card">
       <strong>${escapeHtml(demand.title)}</strong>
-      <p>${escapeHtml(demand.client)} - ${escapeHtml(owner?.name || "Sem responsavel")}</p>
+      <p>${escapeHtml(client?.name || demand.client)} - ${escapeHtml(owner?.name || "Sem responsavel")}</p>
       <span class="tag${late}">${formatDate(demand.dueDate)}</span>
     </div>
+  `;
+}
+
+function renderClients() {
+  const visible = getVisibleClients();
+  elements.clientGrid.innerHTML = visible.length
+    ? visible.map(clientCardTemplate).join("")
+    : `<div class="empty-state">Nenhum cliente encontrado</div>`;
+
+  elements.clientGrid.querySelectorAll(".client-card").forEach((card) => {
+    card.addEventListener("click", () => openClientDialog(card.dataset.id));
+  });
+}
+
+function clientCardTemplate(client) {
+  const owner = getOwner(client.ownerId);
+  const demandCount = state.demands.filter((demand) => demand.clientId === client.id).length;
+  const services = (client.services || []).slice(0, 4).map((service) => `<span class="tag">${escapeHtml(service)}</span>`).join("");
+  const statusClass = client.status === "Ativo" ? "low" : client.status === "Inativo" ? "high" : "medium";
+  const financeClass = client.financeStatus === "Regular" ? "low" : "high";
+
+  return `
+    <button class="client-card" type="button" data-id="${client.id}">
+      <div class="client-card-header">
+        <span class="tag ${statusClass}">${escapeHtml(client.status)}</span>
+        <span class="tag ${financeClass}">${escapeHtml(client.financeStatus)}</span>
+      </div>
+      <h3>${escapeHtml(client.name)}</h3>
+      <p>${escapeHtml(client.notes || "Sem observacoes")}</p>
+      <div class="tag-row">${services}</div>
+      <div class="card-footer">
+        <span class="owner-pill">
+          <span class="owner-avatar" style="background:${owner?.color || "#202124"}">${getInitials(owner?.name)}</span>
+          ${escapeHtml(owner?.name || "Sem responsavel")}
+        </span>
+        <span class="tag">${demandCount} demandas</span>
+      </div>
+    </button>
   `;
 }
 
@@ -971,6 +1099,7 @@ function renderBoard() {
 
 function demandCardTemplate(demand) {
   const owner = getOwner(demand.ownerId);
+  const client = getClient(demand.clientId);
   const priorityClass = demand.priority === "Alta" ? "high" : demand.priority === "Media" ? "medium" : "low";
   const projectPriorityClass =
     demand.projectPriority === "Critico" ? "critical" : demand.projectPriority === "Alta" ? "high" : demand.projectPriority === "Media" ? "medium" : "low";
@@ -995,7 +1124,7 @@ function demandCardTemplate(demand) {
       <span class="card-cover ${projectPriorityClass}"></span>
       <h3 class="card-title">${escapeHtml(demand.title)}</h3>
       <div class="card-meta">
-        <span>${escapeHtml(demand.client)}</span>
+        <span>${escapeHtml(client?.name || demand.client)}</span>
         <span>•</span>
         <span class="owner-pill">
           <span class="owner-avatar" style="background:${owner?.color || "#202124"}">${getInitials(owner?.name)}</span>
@@ -1145,7 +1274,7 @@ function openDemandDialog(demandId = "") {
   elements.demandForm.reset();
   elements.demandId.value = demand?.id || "";
   elements.demandTitle.value = demand?.title || "";
-  elements.demandClient.value = demand?.client || "";
+  elements.demandClient.value = demand?.clientId || findClientIdByName(demand?.client) || state.clients[0]?.id || "";
   elements.demandOwner.value = demand?.ownerId || (selectedPersonId !== "todos" ? selectedPersonId : state.people[0].id);
   elements.demandStatus.value = demand?.status || "Backlog";
   elements.demandPriority.value = demand?.priority || "Media";
@@ -1163,6 +1292,21 @@ function openDemandDialog(demandId = "") {
   elements.demandDialogTitle.textContent = demand ? "Editar demanda" : "Nova demanda";
   elements.deleteDemandButton.hidden = !demand;
   elements.demandDialog.showModal();
+}
+
+function openClientDialog(clientId = "") {
+  const client = state.clients.find((item) => item.id === clientId);
+  elements.clientForm.reset();
+  elements.clientId.value = client?.id || "";
+  elements.clientName.value = client?.name || "";
+  elements.clientStatus.value = client?.status || "Ativo";
+  elements.clientOwner.value = client?.ownerId || (selectedPersonId !== "todos" ? selectedPersonId : state.people[0].id);
+  elements.clientFinanceStatus.value = client?.financeStatus || "Regular";
+  elements.clientServices.value = (client?.services || []).join("\n");
+  elements.clientNotes.value = client?.notes || "";
+  elements.clientDialogTitle.textContent = client ? "Editar cliente" : "Novo cliente";
+  elements.deleteClientButton.hidden = !client;
+  elements.clientDialog.showModal();
 }
 
 function openRoleDialog(personId) {
@@ -1248,10 +1392,12 @@ function deletePerson() {
 function saveDemand(event) {
   event.preventDefault();
   const ownerId = elements.demandOwner.value;
+  const client = getClient(elements.demandClient.value);
   const demand = {
     id: elements.demandId.value || crypto.randomUUID(),
     title: elements.demandTitle.value.trim(),
-    client: elements.demandClient.value.trim(),
+    clientId: client?.id || "",
+    client: client?.name || "",
     ownerId,
     status: elements.demandStatus.value,
     priority: elements.demandPriority.value,
@@ -1277,6 +1423,46 @@ function saveDemand(event) {
   elements.demandDialog.close();
   render();
   syncCalendarIfEnabled([demand]);
+}
+
+function saveClient(event) {
+  event.preventDefault();
+  const client = {
+    id: elements.clientId.value || slugify(elements.clientName.value) || crypto.randomUUID(),
+    name: elements.clientName.value.trim(),
+    status: elements.clientStatus.value,
+    ownerId: elements.clientOwner.value,
+    financeStatus: elements.clientFinanceStatus.value,
+    services: elements.clientServices.value
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean),
+    notes: elements.clientNotes.value.trim(),
+  };
+
+  if (!client.name) return;
+
+  const index = state.clients.findIndex((item) => item.id === client.id);
+  if (index >= 0) state.clients[index] = client;
+  else state.clients.push(client);
+
+  state.demands = state.demands.map((demand) =>
+    demand.clientId === client.id ? { ...demand, client: client.name } : demand,
+  );
+
+  elements.clientDialog.close();
+  render();
+}
+
+function deleteClient() {
+  const clientId = elements.clientId.value;
+  const hasDemands = state.demands.some((demand) => demand.clientId === clientId);
+  if (hasDemands && !confirm("Este cliente tem demandas. Excluir tambem essas demandas?")) return;
+
+  state.clients = state.clients.filter((client) => client.id !== clientId);
+  state.demands = state.demands.filter((demand) => demand.clientId !== clientId);
+  elements.clientDialog.close();
+  render();
 }
 
 function saveRole(event) {
@@ -1436,10 +1622,11 @@ async function syncCalendar(demands = state.demands, options = {}) {
     .filter((demand) => demand.calendarDate || demand.dueDate)
     .map((demand) => {
       const owner = getOwner(demand.ownerId);
+      const client = getClient(demand.clientId);
       return {
         id: demand.id,
         title: demand.title,
-        client: demand.client,
+        client: client?.name || demand.client,
         ownerName: owner?.name || "",
         ownerEmail: owner?.email || "",
         status: demand.status,
@@ -1636,6 +1823,15 @@ function getInitials(name = "") {
     .toUpperCase();
 }
 
+function slugify(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, (char) => {
     const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
@@ -1660,6 +1856,9 @@ elements.testCalendarSyncButton.addEventListener("click", () => {
   saveCalendarSettings();
   syncCalendar();
 });
+elements.addClientButton.addEventListener("click", () => openClientDialog());
+elements.clientForm.addEventListener("submit", saveClient);
+elements.deleteClientButton.addEventListener("click", deleteClient);
 elements.addPersonButton.addEventListener("click", () => openPersonDialog());
 elements.addDemandButton.addEventListener("click", () => openDemandDialog());
 elements.addProcessButton.addEventListener("click", () => openProcessDialog());

@@ -19,6 +19,7 @@
 
         <nav class="view-tabs" aria-label="Visoes da plataforma">
           <button class="tab-button active" data-view="dashboard" type="button">Dashboard</button>
+          <button class="tab-button" data-view="clients" type="button">Clientes</button>
           <button class="tab-button" data-view="demands" type="button">Demandas</button>
           <button class="tab-button" data-view="processes" type="button">Processos</button>
           <button class="tab-button" data-view="roles" type="button">Funcoes</button>
@@ -77,6 +78,7 @@
             <p class="eyebrow" id="selectedPersonLabel">Todas as demandas</p>
             <h2 id="workspaceTitle">Painel da equipe</h2>
           </div>
+          <button class="primary-button" id="addClientButton" type="button" hidden>Novo cliente</button>
           <button class="primary-button" id="addDemandButton" type="button">Nova demanda</button>
           <button class="primary-button" id="addProcessButton" type="button" hidden>Novo processo</button>
         </div>
@@ -84,6 +86,7 @@
         <section class="metrics" id="metrics"></section>
 
         <section class="dashboard-grid" id="dashboardGrid"></section>
+        <section class="client-grid" id="clientGrid" hidden></section>
         <section class="board" id="board"></section>
         <section class="process-grid" id="processGrid" hidden></section>
         <section class="role-grid" id="roleGrid" hidden></section>
@@ -134,7 +137,7 @@
           </label>
           <label>
             Cliente
-            <input id="demandClient" required maxlength="60" />
+            <select id="demandClient" required></select>
           </label>
           <label>
             Responsavel
@@ -315,6 +318,58 @@
         </label>
         <div class="modal-actions">
           <button class="ghost-button" id="editRolePersonButton" type="button">Editar pessoa</button>
+          <button class="primary-button" value="default" type="submit">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="clientDialog">
+      <form method="dialog" class="modal-form wide" id="clientForm">
+        <div class="modal-header">
+          <h2 id="clientDialogTitle">Novo cliente</h2>
+          <button class="icon-button" data-close-dialog="clientDialog" title="Fechar" type="button">×</button>
+        </div>
+        <input id="clientId" type="hidden" />
+        <div class="field-grid">
+          <label>
+            Nome do cliente
+            <input id="clientName" required maxlength="90" />
+          </label>
+          <label>
+            Status
+            <select id="clientStatus">
+              <option>Ativo</option>
+              <option>Inativo</option>
+              <option>Onboarding</option>
+              <option>Pausado</option>
+              <option>Encerrado</option>
+            </select>
+          </label>
+          <label>
+            Responsavel principal
+            <select id="clientOwner"></select>
+          </label>
+          <label>
+            Juridico/financeiro
+            <select id="clientFinanceStatus">
+              <option>Regular</option>
+              <option>Pendente</option>
+              <option>Inadimplente</option>
+              <option>Contrato pendente</option>
+              <option>Em formalizacao</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          Servicos contratados
+          <textarea id="clientServices" rows="4" placeholder="Um servico por linha"></textarea>
+        </label>
+        <label>
+          Observacoes
+          <textarea id="clientNotes" rows="4" maxlength="700"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button class="ghost-button danger" id="deleteClientButton" type="button">Excluir</button>
           <button class="primary-button" value="default" type="submit">Salvar</button>
         </div>
       </form>

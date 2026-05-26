@@ -11,8 +11,9 @@ Abra o arquivo `index.html` no navegador.
 - Cadastrar, editar e excluir colaboradores.
 - Registrar e-mail dos colaboradores para agenda.
 - Acompanhar um dashboard executivo da operacao.
+- Cadastrar clientes ativos/inativos, servicos contratados e situacao juridico/financeira.
 - Criar, editar e excluir demandas.
-- Ver demandas por colaborador ou pela equipe toda.
+- Ver demandas por cliente, colaborador ou pela equipe toda.
 - Registrar etapa, prazo, entrega real, tempo previsto e tempo gasto por demanda.
 - Registrar data e hora de agenda para cada demanda.
 - Medir saldo de horas para acompanhar produtividade por pessoa e etapa.
