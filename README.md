@@ -8,6 +8,7 @@ Abra o arquivo `index.html` no navegador.
 
 ## O que da para fazer
 
+- Entrar com acesso por senha para direcao, colaborador ou cliente.
 - Cadastrar, editar e excluir colaboradores.
 - Registrar e-mail dos colaboradores para agenda.
 - Acompanhar um dashboard executivo da operacao.
@@ -47,9 +48,19 @@ Abra o arquivo `index.html` no navegador.
 
 Os dados ficam salvos no navegador, usando `localStorage`. Para compartilhar ou fazer backup, use o botao **Exportar**.
 
+## Senhas locais
+
+Enquanto a plataforma roda como arquivo local, o login serve para separar visualizacoes e reduzir acesso acidental. Ele nao substitui autenticacao real para materiais sensiveis, porque o codigo do arquivo pode ser aberto por quem tiver acesso ao computador.
+
+- Direcao: `sou-admin`
+- Colaborador: `sou-` + id do colaborador. Exemplo: `sou-laura`.
+- Cliente: `cliente-` + id do cliente. Exemplo: `cliente-starnet`.
+
+Para seguranca real por senha, o proximo passo e migrar para uma versao hospedada com banco de dados e autenticacao, como Supabase ou Firebase.
+
 ## Proximos passos possiveis
 
-- Login para cada colaborador.
+- Autenticacao real com banco de dados e permissoes por usuario.
 - Banco de dados compartilhado.
 - Comentarios dentro de cada demanda.
 - Anexos e links de referencia.

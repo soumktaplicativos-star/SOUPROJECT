@@ -7,7 +7,42 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="app-shell">
+    <section class="login-screen" id="loginScreen">
+      <form class="login-card" id="loginForm">
+        <div class="brand-block login-brand">
+          <span class="brand-mark">S</span>
+          <div>
+            <p class="eyebrow">SOU Marketing</p>
+            <h1>SOU Ops</h1>
+          </div>
+        </div>
+        <div>
+          <h2>Acessar plataforma</h2>
+          <p>Entre com seu perfil para visualizar somente as areas liberadas.</p>
+        </div>
+        <label>
+          Nivel de acesso
+          <select id="loginRole">
+            <option value="admin">Direcao</option>
+            <option value="collaborator">Colaborador</option>
+            <option value="client">Cliente</option>
+          </select>
+        </label>
+        <label id="loginProfileLabel" hidden>
+          Perfil
+          <select id="loginProfile"></select>
+        </label>
+        <label>
+          Senha
+          <input id="loginPassword" type="password" autocomplete="current-password" required />
+        </label>
+        <p class="login-error" id="loginError" hidden>Senha incorreta para este acesso.</p>
+        <button class="primary-button" type="submit">Entrar</button>
+        <p class="form-hint">Este login separa as visualizacoes. Para seguranca real de dados sensiveis, a plataforma precisa de backend.</p>
+      </form>
+    </section>
+
+    <main class="app-shell" id="appShell" hidden>
       <aside class="sidebar">
         <div class="brand-block">
           <span class="brand-mark">S</span>
@@ -28,6 +63,10 @@
         <section class="panel access-panel">
           <div class="panel-header">
             <h2>Acesso</h2>
+          </div>
+          <div class="session-card">
+            <span id="sessionLabel">Direcao</span>
+            <button class="ghost-button" id="logoutButton" type="button">Sair</button>
           </div>
           <label>
             Perfil

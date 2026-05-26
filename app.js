@@ -2,6 +2,7 @@ const statuses = ["Backlog", "Em andamento", "Aguardando", "Concluido"];
 const storageKey = "sou-demandas-v1";
 const calendarSettingsKey = "sou-calendar-settings-v1";
 const accessSettingsKey = "sou-access-settings-v1";
+const sessionSettingsKey = "sou-session-v1";
 
 const peopleSeed = [
   { id: "isabela", name: "Isabela", role: "Direcao estrategica e gestao", email: "", color: "#1864ab" },
@@ -831,11 +832,22 @@ const seedData = {
 let state = loadState();
 let calendarSettings = loadCalendarSettings();
 let currentAccess = loadAccessSettings();
+let currentSession = loadSessionSettings();
 let selectedPersonId = "todos";
 let selectedView = "dashboard";
 let draggedDemandId = "";
 
 const elements = {
+  loginScreen: document.querySelector("#loginScreen"),
+  appShell: document.querySelector("#appShell"),
+  loginForm: document.querySelector("#loginForm"),
+  loginRole: document.querySelector("#loginRole"),
+  loginProfile: document.querySelector("#loginProfile"),
+  loginProfileLabel: document.querySelector("#loginProfileLabel"),
+  loginPassword: document.querySelector("#loginPassword"),
+  loginError: document.querySelector("#loginError"),
+  logoutButton: document.querySelector("#logoutButton"),
+  sessionLabel: document.querySelector("#sessionLabel"),
   personList: document.querySelector("#personList"),
   dashboardGrid: document.querySelector("#dashboardGrid"),
   clientGrid: document.querySelector("#clientGrid"),
@@ -1010,6 +1022,28 @@ function saveAccessSettings() {
   localStorage.setItem(accessSettingsKey, JSON.stringify(currentAccess));
 }
 
+function loadSessionSettings() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(sessionSettingsKey) || "{}");
+    if (!saved.authenticated) return { authenticated: false };
+    return {
+      authenticated: true,
+      role: saved.role || "admin",
+      profileId: saved.profileId || "",
+    };
+  } catch {
+    return { authenticated: false };
+  }
+}
+
+function saveSessionSettings() {
+  sessionStorage.setItem(sessionSettingsKey, JSON.stringify(currentSession));
+}
+
+function clearSessionSettings() {
+  sessionStorage.removeItem(sessionSettingsKey);
+}
+
 function normalizePerson(person) {
   return {
     ...person,
@@ -1129,6 +1163,49 @@ function roleAllowedByAccess(role) {
   return true;
 }
 
+function getExpectedPassword(role, profileId = "") {
+  if (role === "admin") return "sou-admin";
+  if (role === "collaborator") return `sou-${profileId}`;
+  if (role === "client") return `cliente-${profileId}`;
+  return "";
+}
+
+function handleLogin(event) {
+  event.preventDefault();
+  const role = elements.loginRole.value;
+  const profileId = role === "admin" ? "" : elements.loginProfile.value;
+  const password = elements.loginPassword.value.trim();
+  const expected = getExpectedPassword(role, profileId);
+
+  if (!expected || password !== expected) {
+    elements.loginError.hidden = false;
+    return;
+  }
+
+  elements.loginError.hidden = true;
+  elements.loginPassword.value = "";
+  currentSession = {
+    authenticated: true,
+    role,
+    profileId,
+  };
+  currentAccess = {
+    role,
+    profileId,
+  };
+  selectedPersonId = role === "collaborator" ? profileId : "todos";
+  selectedView = "dashboard";
+  saveSessionSettings();
+  saveAccessSettings();
+  render();
+}
+
+function handleLogout() {
+  currentSession = { authenticated: false };
+  clearSessionSettings();
+  render();
+}
+
 function getVisibleDemands() {
   const status = elements.statusFilter.value;
   const search = elements.searchInput.value.trim().toLowerCase();
@@ -1207,6 +1284,8 @@ function getVisibleClients() {
 }
 
 function render() {
+  renderAuthShell();
+  if (!currentSession.authenticated) return;
   ensureAccessState();
   renderAccessControls();
   renderPeople();
@@ -1215,6 +1294,39 @@ function render() {
   renderMetrics();
   renderMainView();
   saveState();
+}
+
+function renderAuthShell() {
+  const isAuthenticated = Boolean(currentSession.authenticated);
+  elements.loginScreen.hidden = isAuthenticated;
+  elements.appShell.hidden = !isAuthenticated;
+
+  if (!isAuthenticated) {
+    renderLoginProfiles();
+    return;
+  }
+
+  currentAccess = {
+    role: currentSession.role,
+    profileId: currentSession.profileId || "",
+  };
+  elements.sessionLabel.textContent = getSessionLabel();
+}
+
+function renderLoginProfiles() {
+  const role = elements.loginRole.value;
+  const profiles = role === "client" ? state.clients : role === "collaborator" ? state.people : [];
+
+  elements.loginProfileLabel.hidden = role === "admin";
+  elements.loginProfile.innerHTML = profiles
+    .map((profile) => `<option value="${profile.id}">${escapeHtml(profile.name)}</option>`)
+    .join("");
+}
+
+function getSessionLabel() {
+  if (isClientAccess()) return `Cliente: ${getClient(currentAccess.profileId)?.name || "Projeto"}`;
+  if (isCollaboratorAccess()) return `Colaborador: ${getOwner(currentAccess.profileId)?.name || "Equipe"}`;
+  return "Direcao";
 }
 
 function ensureAccessState() {
@@ -2581,6 +2693,12 @@ elements.testCalendarSyncButton.addEventListener("click", () => {
   saveCalendarSettings();
   syncCalendar();
 });
+elements.loginForm.addEventListener("submit", handleLogin);
+elements.loginRole.addEventListener("change", () => {
+  elements.loginError.hidden = true;
+  renderLoginProfiles();
+});
+elements.logoutButton.addEventListener("click", handleLogout);
 elements.accessRole.addEventListener("change", () => {
   currentAccess = {
     role: elements.accessRole.value,
