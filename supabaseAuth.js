@@ -1,7 +1,9 @@
 // Estrutura inicial para autenticacao futura com Supabase Auth.
-// Este arquivo ainda nao e importado pelo app atual e nao substitui o login local.
+// Este arquivo nao substitui o login local.
 
 (function setupSupabaseAuth(global) {
+  const LOG_PREFIX = "[SOU Supabase Auth]";
+
   function getSupabaseClient() {
     if (global.SOU_SUPABASE_CLIENT) return global.SOU_SUPABASE_CLIENT;
 
@@ -12,6 +14,10 @@
     const config = global.assertSouSupabaseConfig();
     global.SOU_SUPABASE_CLIENT = global.supabase.createClient(config.url, config.anonKey);
     return global.SOU_SUPABASE_CLIENT;
+  }
+
+  function canUseSupabaseAuth() {
+    return Boolean(global.supabase?.createClient && global.hasSouSupabaseConfig?.());
   }
 
   async function signup({ email, password, metadata = {} }) {
@@ -33,6 +39,22 @@
       email,
       password,
     });
+  }
+
+  async function loginAndGetProfile({ email, password }) {
+    const loginResult = await login({ email, password });
+
+    if (loginResult.error) {
+      return { user: null, profile: null, error: loginResult.error };
+    }
+
+    const { profile, error: profileError } = await getProfileForCurrentUser();
+
+    return {
+      user: loginResult.data?.user || null,
+      profile,
+      error: profileError,
+    };
   }
 
   async function logout() {
@@ -72,6 +94,42 @@
     return { profile: data || null, error };
   }
 
+  async function logCurrentAuthenticatedProfile() {
+    if (!canUseSupabaseAuth()) {
+      console.log(`${LOG_PREFIX} configuracao ausente; auth real ainda nao foi validado.`);
+      return;
+    }
+
+    const { user, error: userError } = await getCurrentUser();
+
+    if (userError) {
+      console.log(`${LOG_PREFIX} erro ao validar usuario atual`, userError);
+      return;
+    }
+
+    if (!user) {
+      console.log(`${LOG_PREFIX} nenhuma sessao ativa.`);
+      return;
+    }
+
+    const { profile, error: profileError } = await getProfileForCurrentUser();
+
+    if (profileError) {
+      console.log(`${LOG_PREFIX} usuario autenticado sem profile carregado`, {
+        id: user.id,
+        email: user.email,
+        role: null,
+      });
+      return;
+    }
+
+    console.log(`${LOG_PREFIX} profile autenticado`, {
+      id: user.id,
+      email: user.email,
+      role: profile?.role || null,
+    });
+  }
+
   function prepareProfilePayload(user, profileData = {}) {
     return {
       auth_user_id: user.id,
@@ -87,10 +145,14 @@
   global.SOU_SUPABASE_AUTH = {
     signup,
     login,
+    loginAndGetProfile,
     logout,
     getCurrentUser,
     getCurrentSession,
     getProfileForCurrentUser,
     prepareProfilePayload,
+    logCurrentAuthenticatedProfile,
   };
+
+  logCurrentAuthenticatedProfile();
 })(window);

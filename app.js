@@ -844,6 +844,7 @@ const elements = {
   loginRole: document.querySelector("#loginRole"),
   loginProfile: document.querySelector("#loginProfile"),
   loginProfileLabel: document.querySelector("#loginProfileLabel"),
+  loginEmail: document.querySelector("#loginEmail"),
   loginPassword: document.querySelector("#loginPassword"),
   loginError: document.querySelector("#loginError"),
   logoutButton: document.querySelector("#logoutButton"),
@@ -1170,14 +1171,22 @@ function getExpectedPassword(role, profileId = "") {
   return "";
 }
 
-function handleLogin(event) {
+async function handleLogin(event) {
   event.preventDefault();
   const role = elements.loginRole.value;
   const profileId = role === "admin" ? "" : elements.loginProfile.value;
+  const email = elements.loginEmail.value.trim();
   const password = elements.loginPassword.value.trim();
+
+  if (email && password) {
+    await handleSupabaseLogin(email, password);
+    return;
+  }
+
   const expected = getExpectedPassword(role, profileId);
 
   if (!expected || password !== expected) {
+    elements.loginError.textContent = "Senha incorreta para este acesso.";
     elements.loginError.hidden = false;
     return;
   }
@@ -1198,6 +1207,76 @@ function handleLogin(event) {
   saveSessionSettings();
   saveAccessSettings();
   render();
+}
+
+async function handleSupabaseLogin(email, password) {
+  if (!window.SOU_SUPABASE_AUTH?.loginAndGetProfile || !window.hasSouSupabaseConfig?.()) {
+    elements.loginError.textContent = "Supabase ainda nao esta configurado. Use o acesso local por enquanto.";
+    elements.loginError.hidden = false;
+    return;
+  }
+
+  const { user, profile, error } = await window.SOU_SUPABASE_AUTH.loginAndGetProfile({ email, password });
+
+  if (error || !user || !profile) {
+    elements.loginError.textContent = error?.message || "Login Supabase validado, mas nenhum profile foi encontrado.";
+    elements.loginError.hidden = false;
+    return;
+  }
+
+  const session = createLocalSessionFromProfile(profile);
+
+  if (!session) {
+    elements.loginError.textContent = "Profile Supabase sem vinculo local nesta etapa da migracao.";
+    elements.loginError.hidden = false;
+    return;
+  }
+
+  console.log("[SOU Supabase Auth] login Supabase validado", {
+    id: user.id,
+    email: user.email,
+    role: profile.role,
+  });
+
+  elements.loginError.hidden = true;
+  elements.loginEmail.value = "";
+  elements.loginPassword.value = "";
+  currentSession = session;
+  currentAccess = {
+    role: session.role,
+    profileId: session.profileId,
+  };
+  selectedPersonId = session.role === "collaborator" ? session.profileId : "todos";
+  selectedView = "dashboard";
+  saveSessionSettings();
+  saveAccessSettings();
+  render();
+}
+
+function createLocalSessionFromProfile(profile) {
+  const role = profile.role;
+
+  if (role === "admin") {
+    return { authenticated: true, role: "admin", profileId: "" };
+  }
+
+  if (role === "collaborator") {
+    const person = state.people.find(
+      (item) => item.email === profile.email || item.name.toLowerCase() === String(profile.name || "").toLowerCase(),
+    );
+    if (!person) return null;
+    return { authenticated: true, role: "collaborator", profileId: person.id };
+  }
+
+  if (role === "client") {
+    const client = state.clients.find(
+      (item) => item.id === profile.client_id || item.name.toLowerCase() === String(profile.name || "").toLowerCase(),
+    );
+    if (!client) return null;
+    return { authenticated: true, role: "client", profileId: client.id };
+  }
+
+  return null;
 }
 
 function handleLogout() {
