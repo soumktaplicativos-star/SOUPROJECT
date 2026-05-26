@@ -63,6 +63,8 @@
             <input id="globalSearchMirror" type="search" placeholder="Buscar demanda, cliente, etapa..." />
           </div>
           <div class="topbar-actions">
+            <button class="ghost-button" id="calendarSettingsButton" type="button">Conectar agenda</button>
+            <button class="ghost-button" id="syncCalendarButton" type="button">Sincronizar</button>
             <button class="ghost-button" id="exportCalendarButton" type="button">Exportar agenda</button>
             <button class="ghost-button" id="exportButton" type="button">Exportar</button>
             <label class="primary-button" for="importFile">Importar</label>
@@ -314,6 +316,27 @@
         <div class="modal-actions">
           <button class="ghost-button" id="editRolePersonButton" type="button">Editar pessoa</button>
           <button class="primary-button" value="default" type="submit">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="calendarDialog">
+      <form method="dialog" class="modal-form wide" id="calendarForm">
+        <div class="modal-header">
+          <h2>Conectar Google Agenda</h2>
+          <button class="icon-button" data-close-dialog="calendarDialog" title="Fechar" type="button">×</button>
+        </div>
+        <label>
+          URL do Google Apps Script
+          <input id="calendarWebhookUrl" type="url" placeholder="https://script.google.com/macros/s/..." />
+        </label>
+        <label class="checkbox-row">
+          <input id="calendarAutoSync" type="checkbox" />
+          Sincronizar automaticamente quando salvar uma demanda
+        </label>
+        <div class="modal-actions">
+          <button class="ghost-button" id="testCalendarSyncButton" type="button">Testar sincronizacao</button>
+          <button class="primary-button" value="default" type="submit">Salvar conexao</button>
         </div>
       </form>
     </dialog>

@@ -25,7 +25,21 @@ Abra o arquivo `index.html` no navegador.
 - Acompanhar quantidade total, em andamento, aguardando e atrasadas.
 - Exportar os dados em JSON.
 - Exportar tarefas para Google Agenda em arquivo `.ics`, com duracao e participante por e-mail.
+- Sincronizar automaticamente com Google Agenda usando a ponte em `scripts/google-calendar-webhook.gs`.
 - Importar um JSON exportado anteriormente.
+
+## Como ativar sincronizacao automatica com Google Agenda
+
+1. Abra [script.google.com](https://script.google.com).
+2. Crie um novo projeto.
+3. Cole o conteudo de `scripts/google-calendar-webhook.gs`.
+4. Clique em **Implantar** > **Nova implantacao**.
+5. Escolha **App da Web**.
+6. Em **Executar como**, escolha **Eu**.
+7. Em **Quem pode acessar**, escolha **Qualquer pessoa com o link**.
+8. Copie a URL do App da Web.
+9. Na plataforma, clique em **Conectar agenda** e cole a URL.
+10. Ative **Sincronizar automaticamente quando salvar uma demanda**.
 
 ## Onde os dados ficam salvos
 

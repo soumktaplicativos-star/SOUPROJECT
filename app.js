@@ -1,5 +1,6 @@
 const statuses = ["Backlog", "Em andamento", "Aguardando", "Concluido"];
 const storageKey = "sou-demandas-v1";
+const calendarSettingsKey = "sou-calendar-settings-v1";
 
 const peopleSeed = [
   { id: "isabela", name: "Isabela", role: "Direcao estrategica e gestao", email: "", color: "#1864ab" },
@@ -472,6 +473,7 @@ const seedData = {
 };
 
 let state = loadState();
+let calendarSettings = loadCalendarSettings();
 let selectedPersonId = "todos";
 let selectedView = "dashboard";
 let draggedDemandId = "";
@@ -493,6 +495,8 @@ const elements = {
   addDemandButton: document.querySelector("#addDemandButton"),
   addProcessButton: document.querySelector("#addProcessButton"),
   addPersonButton: document.querySelector("#addPersonButton"),
+  calendarSettingsButton: document.querySelector("#calendarSettingsButton"),
+  syncCalendarButton: document.querySelector("#syncCalendarButton"),
   exportButton: document.querySelector("#exportButton"),
   exportCalendarButton: document.querySelector("#exportCalendarButton"),
   importFile: document.querySelector("#importFile"),
@@ -546,6 +550,11 @@ const elements = {
   roleObjective: document.querySelector("#roleObjective"),
   roleResponsibilities: document.querySelector("#roleResponsibilities"),
   editRolePersonButton: document.querySelector("#editRolePersonButton"),
+  calendarDialog: document.querySelector("#calendarDialog"),
+  calendarForm: document.querySelector("#calendarForm"),
+  calendarWebhookUrl: document.querySelector("#calendarWebhookUrl"),
+  calendarAutoSync: document.querySelector("#calendarAutoSync"),
+  testCalendarSyncButton: document.querySelector("#testCalendarSyncButton"),
 };
 
 function loadState() {
@@ -569,6 +578,22 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(storageKey, JSON.stringify(state));
+}
+
+function loadCalendarSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(calendarSettingsKey) || "{}");
+    return {
+      webhookUrl: saved.webhookUrl || "",
+      autoSync: Boolean(saved.autoSync),
+    };
+  } catch {
+    return { webhookUrl: "", autoSync: false };
+  }
+}
+
+function saveCalendarSettings() {
+  localStorage.setItem(calendarSettingsKey, JSON.stringify(calendarSettings));
 }
 
 function normalizePerson(person) {
@@ -1251,6 +1276,7 @@ function saveDemand(event) {
 
   elements.demandDialog.close();
   render();
+  syncCalendarIfEnabled([demand]);
 }
 
 function saveRole(event) {
@@ -1375,6 +1401,79 @@ function exportCalendar() {
 
   if (skipped) {
     alert(`${calendarDemands.length} demandas exportadas. ${skipped} demandas ficaram de fora por falta de data.`);
+  }
+}
+
+function openCalendarSettings() {
+  elements.calendarWebhookUrl.value = calendarSettings.webhookUrl;
+  elements.calendarAutoSync.checked = calendarSettings.autoSync;
+  elements.calendarDialog.showModal();
+}
+
+function saveCalendarConnection(event) {
+  event.preventDefault();
+  calendarSettings = {
+    webhookUrl: elements.calendarWebhookUrl.value.trim(),
+    autoSync: elements.calendarAutoSync.checked,
+  };
+  saveCalendarSettings();
+  elements.calendarDialog.close();
+}
+
+function syncCalendarIfEnabled(demands = state.demands) {
+  if (!calendarSettings.autoSync || !calendarSettings.webhookUrl) return;
+  syncCalendar(demands, { silent: true });
+}
+
+async function syncCalendar(demands = state.demands, options = {}) {
+  if (!calendarSettings.webhookUrl) {
+    if (!options.silent) openCalendarSettings();
+    return;
+  }
+
+  const items = demands
+    .map(normalizeDemand)
+    .filter((demand) => demand.calendarDate || demand.dueDate)
+    .map((demand) => {
+      const owner = getOwner(demand.ownerId);
+      return {
+        id: demand.id,
+        title: demand.title,
+        client: demand.client,
+        ownerName: owner?.name || "",
+        ownerEmail: owner?.email || "",
+        status: demand.status,
+        priority: demand.priority,
+        projectPriority: demand.projectPriority,
+        flowType: demand.flowType,
+        stage: demand.stage,
+        date: demand.calendarDate || demand.dueDate,
+        startTime: demand.startTime || "09:00",
+        durationHours: Number(demand.estimatedHours) || 1,
+        description: demand.description,
+        checklist: normalizeChecklist(demand.checklist),
+      };
+    });
+
+  if (!items.length) {
+    if (!options.silent) alert("Nenhuma demanda tem data de agenda ou prazo definido.");
+    return;
+  }
+
+  try {
+    await fetch(calendarSettings.webhookUrl, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ source: "SOU Ops", timezone: "America/Sao_Paulo", items }),
+    });
+    if (!options.silent) {
+      alert("Sincronizacao enviada ao Google Agenda. Aguarde alguns segundos e confira sua agenda.");
+    }
+  } catch {
+    if (!options.silent) {
+      alert("Nao foi possivel enviar para o Google Agenda. Confira a URL do Apps Script.");
+    }
   }
 }
 
@@ -1549,6 +1648,17 @@ elements.viewTabs.forEach((tab) => {
     selectedView = tab.dataset.view;
     render();
   });
+});
+elements.calendarSettingsButton.addEventListener("click", openCalendarSettings);
+elements.calendarForm.addEventListener("submit", saveCalendarConnection);
+elements.syncCalendarButton.addEventListener("click", () => syncCalendar());
+elements.testCalendarSyncButton.addEventListener("click", () => {
+  calendarSettings = {
+    webhookUrl: elements.calendarWebhookUrl.value.trim(),
+    autoSync: elements.calendarAutoSync.checked,
+  };
+  saveCalendarSettings();
+  syncCalendar();
 });
 elements.addPersonButton.addEventListener("click", () => openPersonDialog());
 elements.addDemandButton.addEventListener("click", () => openDemandDialog());

@@ -825,6 +825,17 @@ dialog::backdrop {
   padding: 0 10px;
 }
 
+.checkbox-row {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
 @media (max-width: 980px) {
   .app-shell {
     grid-template-columns: 1fr;
