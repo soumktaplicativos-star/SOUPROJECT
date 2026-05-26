@@ -22,6 +22,114 @@ const clientsSeed = [
     services: ["Social media", "Captacao", "Trafego pago"],
     notes: "Cliente aprova tudo pelo WhatsApp.",
   },
+  {
+    id: "ativa-bpo",
+    name: "Ativa BPO",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "8 conteudos/mensal", "Captacao 1h30", "Relatorio mensal"],
+    notes: "Contrato de gestao de redes sociais. Primeiro mes focado em planejamento, organizacao dos perfis e comunicacao. Modelo sem repasse financeiro direto entre as partes.",
+  },
+  {
+    id: "conceittus-contabilidade",
+    name: "Conceittus Contabilidade",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "8 conteudos/mensal", "Captacao 1h30", "Relatorio mensal"],
+    notes: "Contrato de gestao de redes sociais. Primeiro mes de estruturacao e planejamento. Modelo sem repasse financeiro direto entre as partes.",
+  },
+  {
+    id: "canhestro-odontologia",
+    name: "Canhestro Odontologia",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "7 postagens/mensal", "Conteudo enviado pelo cliente", "Relatorio mensal"],
+    notes: "Cliente depende do envio de fotos e videos para continuidade do processo. Inclui estruturacao de perfil, estrategia mensal, edicao, agendamento e direcionamento de comunicacao.",
+  },
+  {
+    id: "espaco-geusa-faria",
+    name: "Espaco Geusa Faria",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "10 conteudos/mensal", "Captacao 2h", "Trafego a partir do 2 mes"],
+    notes: "Pacote robusto com planejamento, edicao, agendamento, relatorio a partir do segundo mes e gestao de trafego pago. Vencimento dia 05.",
+  },
+  {
+    id: "estacao-training",
+    name: "Estacao Training",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "8 conteudos/mensal", "Captacao 2h", "Trafego a partir do 3 mes"],
+    notes: "Primeiro mes de estruturacao. Inclui relatorio a partir do segundo mes e trafego pago a partir do terceiro mes. Vencimento dia 05.",
+  },
+  {
+    id: "fernanda-gandra",
+    name: "Fernanda Gandra",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "6 posts no 1 mes", "10 posts depois", "Captacao a partir do 3 mes"],
+    notes: "Contrato com evolucao de escopo por fase: primeiro mes menor, depois aumento de volume e captacao mobile mensal. Vencimento dia 18.",
+  },
+  {
+    id: "hamburgueria-meio-kilo",
+    name: "Hamburgueria Meio Kilo",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "8 postagens/mensal", "Captacao 1h30/2h", "Trafego pontual"],
+    notes: "Captacao de 1h30 nos dois primeiros meses e depois 2h. Trafego pago pontual nos dois primeiros meses. Vencimento dia 25.",
+  },
+  {
+    id: "jantinha",
+    name: "Jantinha",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "8 postagens/mensal", "Captacao 1h30", "Relatorio mensal"],
+    notes: "Gestao estrategica de Instagram com reestruturacao de perfil, planejamento, edicao, captacao mensal, relatorio e agendamento. Vencimento dia 19.",
+  },
+  {
+    id: "legado-e-luz",
+    name: "Legado e Luz",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "4 conteudos/mensal", "Captacao 2h", "Trafego a partir do 3 mes"],
+    notes: "Pacote enxuto com captacao mensal, roteiro, edicao, artes, legendas, agendamento e relatorio. Trafego pago entra a partir do terceiro mes. Vencimento dia 20.",
+  },
+  {
+    id: "imobiliaria-prado",
+    name: "Imobiliaria Prado",
+    status: "Ativo",
+    ownerId: "meriduarda",
+    financeStatus: "Regular",
+    services: ["Videomaker mobile", "1 captacao/mensal", "2 videos editados", "Roteirizacao"],
+    notes: "Cliente Luiz. Fluxo separado de social media completo: captacao de ate 1h, direcionamento estrategico, roteirizacao e edicao de 2 videos captados. Vencimento dia 05.",
+  },
+  {
+    id: "hora-certa-joias",
+    name: "Hora Certa Joias",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "10 conteudos/mensal", "2 perfis", "Trafego pago"],
+    notes: "Cliente Madu. Alta carga operacional: dois perfis, captacao ate 2h, roteiros, edicao, artes, agendamento, relatorio e gestao de trafego pago. Vencimento dia 10.",
+  },
+  {
+    id: "starnet",
+    name: "Starnet",
+    status: "Ativo",
+    ownerId: "laura",
+    financeStatus: "Regular",
+    services: ["Social media", "4 conteudos/mensal", "Captacao 1h", "Relatorio mensal"],
+    notes: "Pacote enxuto com planejamento, roteiro, edicao, artes, legendas, agendamento, relatorio e atendimento por WhatsApp. Vencimento dia 25.",
+  },
 ];
 
 const processesSeed = [
@@ -821,16 +929,28 @@ function loadState() {
     const parsed = JSON.parse(saved);
     if (!Array.isArray(parsed.people) || !Array.isArray(parsed.demands)) return structuredClone(seedData);
 
-    return {
+    return applySeedMigrations({
       people: parsed.people.length ? parsed.people.map(normalizePerson) : peopleSeed,
       clients: Array.isArray(parsed.clients) ? parsed.clients.map(normalizeClient) : clientsSeed,
       demands: parsed.demands.map(normalizeDemand),
       processes: Array.isArray(parsed.processes) ? parsed.processes : processesSeed,
       roles: Array.isArray(parsed.roles) ? parsed.roles : rolesSeed,
-    };
+    });
   } catch {
     return structuredClone(seedData);
   }
+}
+
+function applySeedMigrations(currentState) {
+  const existingClientIds = new Set(currentState.clients.map((client) => client.id));
+  const missingClients = clientsSeed
+    .filter((client) => !existingClientIds.has(client.id))
+    .map((client) => structuredClone(client));
+
+  return {
+    ...currentState,
+    clients: [...currentState.clients, ...missingClients],
+  };
 }
 
 function saveState() {
