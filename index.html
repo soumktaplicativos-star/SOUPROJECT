@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SOU Demandas</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Agencia de marketing</p>
+        <h1>SOU Demandas</h1>
+      </div>
+      <nav class="view-tabs" aria-label="Visoes da plataforma">
+        <button class="tab-button active" data-view="demands" type="button">Demandas</button>
+        <button class="tab-button" data-view="processes" type="button">Processos</button>
+        <button class="tab-button" data-view="roles" type="button">Funcoes</button>
+      </nav>
+      <div class="topbar-actions">
+        <button class="ghost-button" id="exportButton" type="button">Exportar</button>
+        <label class="primary-button" for="importFile">Importar</label>
+        <input id="importFile" type="file" accept="application/json" hidden />
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <aside class="sidebar">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Colaboradores</h2>
+            <button class="icon-button" id="addPersonButton" title="Adicionar colaborador" type="button">+</button>
+          </div>
+          <div class="person-list" id="personList"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Filtros</h2>
+          </div>
+          <label>
+            Status
+            <select id="statusFilter">
+              <option value="todos">Todos</option>
+              <option value="Backlog">Backlog</option>
+              <option value="Em andamento">Em andamento</option>
+              <option value="Aguardando">Aguardando</option>
+              <option value="Concluido">Concluido</option>
+            </select>
+          </label>
+          <label>
+            Busca
+            <input id="searchInput" type="search" placeholder="Cliente, tarefa ou responsavel" />
+          </label>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <div class="workspace-header">
+          <div>
+            <p class="eyebrow" id="selectedPersonLabel">Todas as demandas</p>
+            <h2 id="workspaceTitle">Painel da equipe</h2>
+          </div>
+          <button class="primary-button" id="addDemandButton" type="button">Nova demanda</button>
+          <button class="primary-button" id="addProcessButton" type="button" hidden>Novo processo</button>
+        </div>
+
+        <section class="metrics" id="metrics"></section>
+
+        <section class="board" id="board"></section>
+        <section class="process-grid" id="processGrid" hidden></section>
+        <section class="role-grid" id="roleGrid" hidden></section>
+      </section>
+    </main>
+
+    <dialog id="personDialog">
+      <form method="dialog" class="modal-form" id="personForm">
+        <div class="modal-header">
+          <h2 id="personDialogTitle">Novo colaborador</h2>
+          <button class="icon-button" data-close-dialog="personDialog" title="Fechar" type="button">×</button>
+        </div>
+        <input id="personId" type="hidden" />
+        <label>
+          Nome
+          <input id="personName" required maxlength="42" />
+        </label>
+        <label>
+          Cargo ou area
+          <input id="personRole" required maxlength="48" />
+        </label>
+        <label>
+          Cor
+          <input id="personColor" type="color" value="#2f80ed" />
+        </label>
+        <div class="modal-actions">
+          <button class="ghost-button danger" id="deletePersonButton" type="button">Excluir</button>
+          <button class="primary-button" value="default" type="submit">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="demandDialog">
+      <form method="dialog" class="modal-form wide" id="demandForm">
+        <div class="modal-header">
+          <h2 id="demandDialogTitle">Nova demanda</h2>
+          <button class="icon-button" data-close-dialog="demandDialog" title="Fechar" type="button">×</button>
+        </div>
+        <input id="demandId" type="hidden" />
+        <div class="field-grid">
+          <label>
+            Titulo
+            <input id="demandTitle" required maxlength="80" />
+          </label>
+          <label>
+            Cliente
+            <input id="demandClient" required maxlength="60" />
+          </label>
+          <label>
+            Responsavel
+            <select id="demandOwner" required></select>
+          </label>
+          <label>
+            Status
+            <select id="demandStatus">
+              <option>Backlog</option>
+              <option>Em andamento</option>
+              <option>Aguardando</option>
+              <option>Concluido</option>
+            </select>
+          </label>
+          <label>
+            Prioridade
+            <select id="demandPriority">
+              <option>Alta</option>
+              <option>Media</option>
+              <option>Baixa</option>
+            </select>
+          </label>
+          <label>
+            Etapa
+            <select id="demandStage">
+              <option>Ideia</option>
+              <option>Em cronograma</option>
+              <option>Em roteiro</option>
+              <option>Aguardando gravacao</option>
+              <option>Em edicao</option>
+              <option>Em design</option>
+              <option>Em legenda</option>
+              <option>Em revisao interna</option>
+              <option>Enviado para aprovacao</option>
+              <option>Aguardando cliente</option>
+              <option>Em ajuste</option>
+              <option>Aprovado</option>
+              <option>Agendado</option>
+              <option>Publicado</option>
+              <option>Relatorio</option>
+            </select>
+          </label>
+          <label>
+            Prazo
+            <input id="demandDueDate" type="date" />
+          </label>
+          <label>
+            Entrega real
+            <input id="demandDeliveredDate" type="date" />
+          </label>
+          <label>
+            Tempo previsto (h)
+            <input id="demandEstimatedHours" min="0" step="0.25" type="number" />
+          </label>
+          <label>
+            Tempo gasto (h)
+            <input id="demandActualHours" min="0" step="0.25" type="number" />
+          </label>
+        </div>
+        <label>
+          Descricao
+          <textarea id="demandDescription" rows="4" maxlength="500"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button class="ghost-button danger" id="deleteDemandButton" type="button">Excluir</button>
+          <button class="primary-button" value="default" type="submit">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="processDialog">
+      <form method="dialog" class="modal-form wide" id="processForm">
+        <div class="modal-header">
+          <h2 id="processDialogTitle">Novo processo</h2>
+          <button class="icon-button" data-close-dialog="processDialog" title="Fechar" type="button">×</button>
+        </div>
+        <input id="processId" type="hidden" />
+        <div class="field-grid">
+          <label>
+            Processo
+            <input id="processTitle" required maxlength="90" />
+          </label>
+          <label>
+            Area
+            <input id="processArea" required maxlength="50" />
+          </label>
+          <label>
+            Responsavel
+            <select id="processOwner"></select>
+          </label>
+          <label>
+            Frequencia
+            <select id="processCadence">
+              <option>Mensal</option>
+              <option>Semanal</option>
+              <option>Pontual</option>
+              <option>Diario</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          Objetivo
+          <textarea id="processObjective" rows="3" required maxlength="500"></textarea>
+        </label>
+        <label>
+          Checklist
+          <textarea id="processChecklist" rows="7" placeholder="Uma etapa por linha"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button class="ghost-button danger" id="deleteProcessButton" type="button">Excluir</button>
+          <button class="primary-button" value="default" type="submit">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>

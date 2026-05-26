@@ -1,0 +1,1098 @@
+const statuses = ["Backlog", "Em andamento", "Aguardando", "Concluido"];
+const storageKey = "sou-demandas-v1";
+
+const peopleSeed = [
+  { id: "isabela", name: "Isabela", role: "Direcao estrategica e gestao", color: "#1864ab" },
+  { id: "laura", name: "Laura", role: "Operacoes e atendimento", color: "#0ca678" },
+  { id: "yasmin", name: "Yasmin", role: "Trafego pago", color: "#f08c00" },
+  { id: "meriduarda", name: "Meriduarda", role: "Captacao de conteudo", color: "#c2255c" },
+  { id: "clarinha", name: "Clarinha", role: "Financeiro, juridico e formalizacoes", color: "#7048e8" },
+  { id: "comercial", name: "Comercial", role: "Futura contratacao", color: "#495057" },
+  { id: "estrategista", name: "Estrategista", role: "Futura roteirizacao", color: "#087f5b" },
+];
+
+const processesSeed = [
+  {
+    id: "reuniao-mensal",
+    title: "Reuniao mensal de alinhamento",
+    area: "Estrategia",
+    ownerId: "isabela",
+    cadence: "Mensal",
+    objective: "Entender prioridades do mes seguinte e ajustar a estrategia antes do cronograma ser fechado.",
+    checklist: [
+      "Conferir relatorio e desempenho do mes anterior",
+      "Levantar campanhas, datas comemorativas e produtos prioritarios",
+      "Listar pendencias e perguntas estrategicas",
+      "Registrar decisoes e proximos passos",
+      "Salvar ata na pasta do cliente",
+    ],
+  },
+  {
+    id: "analise-desempenho",
+    title: "Analise mensal de desempenho",
+    area: "Estrategia",
+    ownerId: "isabela",
+    cadence: "Mensal",
+    objective: "Usar dados para orientar o proximo mes e evitar producao de conteudo no escuro.",
+    checklist: [
+      "Coletar alcance, engajamento, cliques e crescimento",
+      "Identificar melhores e piores conteudos",
+      "Avaliar formatos, temas e stories com melhor resposta",
+      "Incluir dados de trafego pago quando houver",
+      "Transformar a analise em decisoes praticas",
+    ],
+  },
+  {
+    id: "prioridades-mes",
+    title: "Definicao das prioridades do mes",
+    area: "Estrategia",
+    ownerId: "isabela",
+    cadence: "Mensal",
+    objective: "Garantir que o cronograma tenha objetivo claro, e nao vire apenas postar por postar.",
+    checklist: [
+      "Definir objetivo principal e objetivos secundarios",
+      "Definir produto ou servico prioritario",
+      "Selecionar campanhas e datas comemorativas",
+      "Avaliar demandas do cliente",
+      "Registrar a estrategia do mes",
+    ],
+  },
+  {
+    id: "cronograma-mensal",
+    title: "Planejamento do cronograma mensal",
+    area: "Conteudo",
+    ownerId: "estrategista",
+    cadence: "Mensal",
+    objective: "Organizar os conteudos do mes com logica estrategica e distribuicao realista para a equipe.",
+    checklist: [
+      "Definir quantidade de posts conforme contrato",
+      "Distribuir formatos por semana",
+      "Equilibrar venda, educativo, institucional e prova social",
+      "Incluir campanhas e temas da reuniao mensal",
+      "Salvar cronograma e atualizar status interno",
+    ],
+  },
+  {
+    id: "validacao-cronograma",
+    title: "Validacao do cronograma",
+    area: "Operacoes",
+    ownerId: "laura",
+    cadence: "Mensal",
+    objective: "Aprovar temas e direcionamentos antes de criar roteiros, legendas, designs e demais materiais.",
+    checklist: [
+      "Fazer revisao interna dos temas",
+      "Enviar cronograma para o cliente",
+      "Informar prazo de retorno",
+      "Registrar aprovacao ou alteracoes",
+      "Atualizar status no controle interno",
+    ],
+  },
+  {
+    id: "roteiros-legendas",
+    title: "Roteiros, legendas e direcionamentos",
+    area: "Conteudo",
+    ownerId: "estrategista",
+    cadence: "Mensal",
+    objective: "Transformar o cronograma em materiais executaveis para gravacao, design, legenda e edicao.",
+    checklist: [
+      "Criar roteiro com objetivo, fala, direcao visual e CTA",
+      "Escrever legendas com tom de voz e hashtags",
+      "Definir estrutura de carrosseis e designs",
+      "Inserir referencias e observacoes de edicao",
+      "Atualizar status de cada conteudo",
+    ],
+  },
+  {
+    id: "captacao-mensal",
+    title: "Planejamento e captacao mensal",
+    area: "Captacao",
+    ownerId: "meriduarda",
+    cadence: "Mensal",
+    objective: "Organizar e gravar todo o material necessario para o ciclo de producao do cliente.",
+    checklist: [
+      "Separar roteiros por cliente",
+      "Confirmar local, horario, pessoas e produtos",
+      "Conferir equipamentos, audio, luz e enquadramento",
+      "Gravar videos principais, takes de apoio e bastidores",
+      "Subir arquivos no Drive e sinalizar pendencias",
+    ],
+  },
+  {
+    id: "distribuicao-producao",
+    title: "Distribuicao para producao",
+    area: "Operacoes",
+    ownerId: "laura",
+    cadence: "Semanal",
+    objective: "Encaminhar cada conteudo para quem vai executar, com responsavel, prazo e material disponivel.",
+    checklist: [
+      "Separar videos, designs, capas, carrosseis e legendas",
+      "Definir responsaveis e prazos",
+      "Garantir acesso aos arquivos necessarios",
+      "Inserir observacoes estrategicas",
+      "Registrar status no controle interno",
+    ],
+  },
+  {
+    id: "producao-conteudos",
+    title: "Producao dos conteudos",
+    area: "Producao",
+    ownerId: "laura",
+    cadence: "Semanal",
+    objective: "Editar, criar e finalizar materiais com qualidade antes da revisao interna.",
+    checklist: [
+      "Conferir briefing, roteiro e arquivos brutos",
+      "Editar video ou criar design conforme identidade visual",
+      "Revisar legenda, CTA e informacoes",
+      "Exportar e salvar arquivo final",
+      "Atualizar status da demanda",
+    ],
+  },
+  {
+    id: "revisao-interna",
+    title: "Revisao interna",
+    area: "Qualidade",
+    ownerId: "isabela",
+    cadence: "Semanal",
+    objective: "Impedir que erro de estrategia, texto, design ou informacao chegue ao cliente.",
+    checklist: [
+      "Conferir se bate com cronograma, objetivo e briefing",
+      "Revisar qualidade visual, audio, headline e CTA",
+      "Checar portugues, promessas e informacoes",
+      "Confirmar que o arquivo esta salvo corretamente",
+      "Liberar para aprovacao do cliente",
+    ],
+  },
+  {
+    id: "aprovacao-cliente",
+    title: "Aprovacao com cliente",
+    area: "Operacoes",
+    ownerId: "laura",
+    cadence: "Semanal",
+    objective: "Enviar conteudos finalizados, controlar retornos e registrar aprovacoes ou ajustes.",
+    checklist: [
+      "Separar conteudos e link organizado",
+      "Enviar mensagem com prazo de aprovacao",
+      "Acompanhar retorno do cliente",
+      "Registrar aprovacao ou ajuste solicitado",
+      "Repassar ajustes com responsavel e prazo",
+    ],
+  },
+  {
+    id: "agendamento-mensal",
+    title: "Agendamento mensal",
+    area: "Operacoes",
+    ownerId: "laura",
+    cadence: "Mensal",
+    objective: "Garantir que publicacoes aprovadas sejam agendadas corretamente.",
+    checklist: [
+      "Conferir conteudo aprovado, capa e legenda",
+      "Conferir data, horario, perfil, localizacao e marcacoes",
+      "Agendar postagem",
+      "Salvar confirmacao quando necessario",
+      "Atualizar status para agendado",
+    ],
+  },
+  {
+    id: "acompanhamento",
+    title: "Acompanhamento durante o mes",
+    area: "Operacoes",
+    ownerId: "laura",
+    cadence: "Semanal",
+    objective: "Monitorar se tudo esta rodando e identificar demandas urgentes ou ajustes de campanha.",
+    checklist: [
+      "Conferir publicacoes da semana",
+      "Verificar comentarios e mensagens relevantes",
+      "Observar desempenho inicial",
+      "Checar campanhas pagas quando houver",
+      "Registrar insights para o relatorio",
+    ],
+  },
+  {
+    id: "relatorio-mensal",
+    title: "Relatorio mensal",
+    area: "Relatorio",
+    ownerId: "laura",
+    cadence: "Mensal",
+    objective: "Mostrar resultado, aprendizados, pontos de atencao e proximos passos ao cliente.",
+    checklist: [
+      "Coletar dados organicos e pagos",
+      "Comparar com o mes anterior",
+      "Identificar destaques e oportunidades",
+      "Montar e revisar relatorio",
+      "Enviar ao cliente e salvar na pasta",
+    ],
+  },
+  {
+    id: "trafego-pago",
+    title: "Gestao de trafego pago",
+    area: "Trafego",
+    ownerId: "yasmin",
+    cadence: "Semanal",
+    objective: "Planejar, executar, monitorar e otimizar campanhas pagas alinhadas aos objetivos comerciais.",
+    checklist: [
+      "Conferir acessos, conta de anuncios e pagamento",
+      "Definir objetivo, publico, verba e criativos",
+      "Subir e monitorar campanhas",
+      "Ajustar anuncios, publicos e verba",
+      "Enviar dados e aprendizados para o relatorio",
+    ],
+  },
+  {
+    id: "financeiro-juridico",
+    title: "Financeiro, juridico e formalizacoes",
+    area: "Administrativo",
+    ownerId: "clarinha",
+    cadence: "Semanal",
+    objective: "Organizar pagamentos, contratos, vencimentos, aditivos, rescisoes e comunicacoes formais.",
+    checklist: [
+      "Conferir pagamentos e clientes em aberto",
+      "Enviar lembretes ou cobrancas quando necessario",
+      "Atualizar controle financeiro",
+      "Organizar contratos e formalizacoes",
+      "Avisar operacao sobre inadimplencias relevantes",
+    ],
+  },
+  {
+    id: "onboarding-operacional",
+    title: "Onboarding operacional",
+    area: "Operacoes",
+    ownerId: "laura",
+    cadence: "Pontual",
+    objective: "Organizar a entrada de novos clientes para que acessos, briefing, grupo e materiais estejam prontos.",
+    checklist: [
+      "Criar grupo do cliente e enviar boas-vindas",
+      "Solicitar e conferir acessos",
+      "Organizar materiais iniciais",
+      "Conferir formulario e pendencias",
+      "Atualizar controle interno do cliente",
+    ],
+  },
+];
+
+const rolesSeed = [
+  {
+    personId: "isabela",
+    title: "Direcao estrategica e gestao",
+    objective: "Garantir direcao estrategica, qualidade, organizacao da equipe e crescimento sustentavel.",
+    responsibilities: [
+      "Gestao geral da agencia e da equipe",
+      "Decisoes estrategicas dos clientes",
+      "Validacao de planos, campanhas e qualidade",
+      "Reunioes estrategicas com clientes",
+      "Criacao e melhoria de processos internos",
+    ],
+  },
+  {
+    personId: "laura",
+    title: "Operacoes e atendimento de clientes",
+    objective: "Manter o fluxo operacional organizado, com prazos, aprovacoes, ajustes e agendamentos sob controle.",
+    responsibilities: [
+      "Onboarding operacional",
+      "Controle de aprovacoes e ajustes",
+      "Agendamento de postagens",
+      "Organizacao de relatorios",
+      "Atualizacao dos status das demandas",
+    ],
+  },
+  {
+    personId: "yasmin",
+    title: "Trafego pago",
+    objective: "Garantir campanhas pagas alinhadas aos objetivos comerciais e estrategicos dos clientes.",
+    responsibilities: [
+      "Conferencia de acessos ao Meta Business",
+      "Estruturacao e otimizacao de campanhas",
+      "Monitoramento de metricas",
+      "Sinalizacao de novos criativos",
+      "Envio de dados para relatorio mensal",
+    ],
+  },
+  {
+    personId: "meriduarda",
+    title: "Captacao de conteudo",
+    objective: "Captar videos, fotos, takes de apoio e bastidores seguindo os roteiros definidos.",
+    responsibilities: [
+      "Conferir roteiros e agenda de gravacao",
+      "Gravar conteudos principais e apoios",
+      "Garantir qualidade de imagem e audio",
+      "Organizar arquivos brutos",
+      "Sinalizar pendencias rapidamente",
+    ],
+  },
+  {
+    personId: "clarinha",
+    title: "Financeiro, juridico e formalizacoes",
+    objective: "Controlar pagamentos, contratos, vencimentos e comunicacoes formais com clientes.",
+    responsibilities: [
+      "Controle financeiro dos clientes",
+      "Comunicacao de cobranca",
+      "Organizacao de contratos",
+      "Aditivos, rescisoes e formalizacoes",
+      "Registro de acordos importantes",
+    ],
+  },
+  {
+    personId: "comercial",
+    title: "Comercial",
+    objective: "Atrair, atender, qualificar e conduzir potenciais clientes ate o fechamento.",
+    responsibilities: [
+      "Prospeccao ativa",
+      "Primeiro atendimento e qualificacao",
+      "Follow-up e funil comercial",
+      "Encaminhamento para proposta",
+      "Transicao limpa para onboarding",
+    ],
+  },
+  {
+    personId: "estrategista",
+    title: "Estrategista de conteudo / Roteirista",
+    objective: "Apoiar cronogramas, roteiros, legendas, campanhas e ideias estrategicas.",
+    responsibilities: [
+      "Criar cronogramas e roteiros",
+      "Criar legendas e textos de carrosseis",
+      "Adaptar tom de voz por cliente",
+      "Organizar direcionamentos de gravacao",
+      "Transformar estrategia em conteudo executavel",
+    ],
+  },
+];
+
+const seedData = {
+  people: peopleSeed,
+  demands: [
+    {
+      id: crypto.randomUUID(),
+      title: "Fechar cronograma mensal",
+      client: "Cliente Exemplo",
+      ownerId: "isabela",
+      status: "Em andamento",
+      priority: "Alta",
+      stage: "Em cronograma",
+      dueDate: "",
+      deliveredDate: "",
+      estimatedHours: 3,
+      actualHours: 0,
+      description: "Definir objetivo do mes, temas e prioridades do cliente.",
+    },
+    {
+      id: crypto.randomUUID(),
+      title: "Enviar conteudos para aprovacao",
+      client: "Marca Modelo",
+      ownerId: "laura",
+      status: "Backlog",
+      priority: "Media",
+      stage: "Enviado para aprovacao",
+      dueDate: "",
+      deliveredDate: "",
+      estimatedHours: 1.5,
+      actualHours: 0,
+      description: "Separar materiais finalizados, enviar link e registrar prazo de retorno.",
+    },
+    {
+      id: crypto.randomUUID(),
+      title: "Otimizar campanha Meta Ads",
+      client: "Loja Demo",
+      ownerId: "yasmin",
+      status: "Aguardando",
+      priority: "Alta",
+      stage: "Aguardando cliente",
+      dueDate: "",
+      deliveredDate: "",
+      estimatedHours: 2,
+      actualHours: 0,
+      description: "Aguardando confirmacao de verba para escalar os conjuntos.",
+    },
+  ],
+  processes: processesSeed,
+  roles: rolesSeed,
+};
+
+let state = loadState();
+let selectedPersonId = "todos";
+let selectedView = "demands";
+let draggedDemandId = "";
+
+const elements = {
+  personList: document.querySelector("#personList"),
+  board: document.querySelector("#board"),
+  processGrid: document.querySelector("#processGrid"),
+  roleGrid: document.querySelector("#roleGrid"),
+  metrics: document.querySelector("#metrics"),
+  selectedPersonLabel: document.querySelector("#selectedPersonLabel"),
+  workspaceTitle: document.querySelector("#workspaceTitle"),
+  statusFilter: document.querySelector("#statusFilter"),
+  searchInput: document.querySelector("#searchInput"),
+  viewTabs: document.querySelectorAll("[data-view]"),
+  addDemandButton: document.querySelector("#addDemandButton"),
+  addProcessButton: document.querySelector("#addProcessButton"),
+  addPersonButton: document.querySelector("#addPersonButton"),
+  exportButton: document.querySelector("#exportButton"),
+  importFile: document.querySelector("#importFile"),
+  personDialog: document.querySelector("#personDialog"),
+  personForm: document.querySelector("#personForm"),
+  personDialogTitle: document.querySelector("#personDialogTitle"),
+  personId: document.querySelector("#personId"),
+  personName: document.querySelector("#personName"),
+  personRole: document.querySelector("#personRole"),
+  personColor: document.querySelector("#personColor"),
+  deletePersonButton: document.querySelector("#deletePersonButton"),
+  demandDialog: document.querySelector("#demandDialog"),
+  demandForm: document.querySelector("#demandForm"),
+  demandDialogTitle: document.querySelector("#demandDialogTitle"),
+  demandId: document.querySelector("#demandId"),
+  demandTitle: document.querySelector("#demandTitle"),
+  demandClient: document.querySelector("#demandClient"),
+  demandOwner: document.querySelector("#demandOwner"),
+  demandStatus: document.querySelector("#demandStatus"),
+  demandPriority: document.querySelector("#demandPriority"),
+  demandStage: document.querySelector("#demandStage"),
+  demandDueDate: document.querySelector("#demandDueDate"),
+  demandDeliveredDate: document.querySelector("#demandDeliveredDate"),
+  demandEstimatedHours: document.querySelector("#demandEstimatedHours"),
+  demandActualHours: document.querySelector("#demandActualHours"),
+  demandDescription: document.querySelector("#demandDescription"),
+  deleteDemandButton: document.querySelector("#deleteDemandButton"),
+  processDialog: document.querySelector("#processDialog"),
+  processForm: document.querySelector("#processForm"),
+  processDialogTitle: document.querySelector("#processDialogTitle"),
+  processId: document.querySelector("#processId"),
+  processTitle: document.querySelector("#processTitle"),
+  processArea: document.querySelector("#processArea"),
+  processOwner: document.querySelector("#processOwner"),
+  processCadence: document.querySelector("#processCadence"),
+  processObjective: document.querySelector("#processObjective"),
+  processChecklist: document.querySelector("#processChecklist"),
+  deleteProcessButton: document.querySelector("#deleteProcessButton"),
+};
+
+function loadState() {
+  const saved = localStorage.getItem(storageKey);
+  if (!saved) return structuredClone(seedData);
+
+  try {
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed.people) || !Array.isArray(parsed.demands)) return structuredClone(seedData);
+
+    return {
+      people: parsed.people.length ? parsed.people : peopleSeed,
+      demands: parsed.demands,
+      processes: Array.isArray(parsed.processes) ? parsed.processes : processesSeed,
+      roles: Array.isArray(parsed.roles) ? parsed.roles : rolesSeed,
+    };
+  } catch {
+    return structuredClone(seedData);
+  }
+}
+
+function saveState() {
+  localStorage.setItem(storageKey, JSON.stringify(state));
+}
+
+function getOwner(ownerId) {
+  return state.people.find((person) => person.id === ownerId);
+}
+
+function getVisibleDemands() {
+  const status = elements.statusFilter.value;
+  const search = elements.searchInput.value.trim().toLowerCase();
+
+  return state.demands.filter((demand) => {
+    const owner = getOwner(demand.ownerId);
+    const personMatch = selectedPersonId === "todos" || demand.ownerId === selectedPersonId;
+    const statusMatch = status === "todos" || demand.status === status;
+    const searchText = [demand.title, demand.client, owner?.name, demand.stage, demand.description].join(" ").toLowerCase();
+
+    return personMatch && statusMatch && searchText.includes(search);
+  });
+}
+
+function getVisibleProcesses() {
+  const search = elements.searchInput.value.trim().toLowerCase();
+
+  return state.processes.filter((process) => {
+    const owner = getOwner(process.ownerId);
+    const personMatch = selectedPersonId === "todos" || process.ownerId === selectedPersonId;
+    const searchText = [
+      process.title,
+      process.area,
+      process.cadence,
+      process.objective,
+      owner?.name,
+      ...(process.checklist || []),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return personMatch && searchText.includes(search);
+  });
+}
+
+function getVisibleRoles() {
+  return state.roles.filter((role) => selectedPersonId === "todos" || role.personId === selectedPersonId);
+}
+
+function render() {
+  renderPeople();
+  renderOwnerOptions();
+  renderHeader();
+  renderMetrics();
+  renderMainView();
+  saveState();
+}
+
+function renderPeople() {
+  const allCount = selectedView === "processes" ? state.processes.length : state.demands.length;
+  const rows = [
+    personButtonTemplate({ id: "todos", name: "Toda a equipe", role: "Visao geral", color: "#202124" }, allCount),
+    ...state.people.map((person) => {
+      const count =
+        selectedView === "processes"
+          ? state.processes.filter((process) => process.ownerId === person.id).length
+          : state.demands.filter((demand) => demand.ownerId === person.id).length;
+      return personButtonTemplate(person, count);
+    }),
+  ];
+
+  elements.personList.innerHTML = rows.join("");
+
+  elements.personList.querySelectorAll(".person-row").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedPersonId = button.dataset.id;
+      render();
+    });
+
+    button.addEventListener("dblclick", () => {
+      if (button.dataset.id !== "todos") openPersonDialog(button.dataset.id);
+    });
+  });
+}
+
+function personButtonTemplate(person, count) {
+  const active = selectedPersonId === person.id ? " active" : "";
+  return `
+    <button class="person-row${active}" type="button" data-id="${person.id}">
+      <span class="person-dot" style="background:${person.color}"></span>
+      <span>
+        <span class="person-name">${escapeHtml(person.name)}</span>
+        <span class="person-role">${escapeHtml(person.role)}</span>
+      </span>
+      <span class="person-count">${count}</span>
+    </button>
+  `;
+}
+
+function renderOwnerOptions() {
+  const options = state.people.map((person) => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
+  elements.demandOwner.innerHTML = options;
+  elements.processOwner.innerHTML = options;
+}
+
+function renderHeader() {
+  const person = selectedPersonId === "todos" ? null : getOwner(selectedPersonId);
+  const viewLabels = {
+    demands: person ? "Demandas do colaborador" : "Todas as demandas",
+    processes: person ? "Processos do colaborador" : "Processos da agencia",
+    roles: person ? "Funcao do colaborador" : "Funcoes da equipe",
+  };
+  const viewTitles = {
+    demands: person ? person.name : "Painel da equipe",
+    processes: person ? person.name : "Processos internos",
+    roles: person ? person.name : "Responsabilidades",
+  };
+
+  elements.selectedPersonLabel.textContent = viewLabels[selectedView];
+  elements.workspaceTitle.textContent = viewTitles[selectedView];
+  elements.addDemandButton.hidden = selectedView !== "demands";
+  elements.addProcessButton.hidden = selectedView !== "processes";
+
+  elements.viewTabs.forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.view === selectedView);
+  });
+}
+
+function renderMetrics() {
+  if (selectedView === "demands") {
+    const visible = getVisibleDemands();
+    const estimated = sumHours(visible, "estimatedHours");
+    const actual = sumHours(visible, "actualHours");
+    renderMetricItems([
+      ["Demandas", visible.length],
+      ["Em andamento", visible.filter((demand) => demand.status === "Em andamento").length],
+      ["Horas prev.", formatHours(estimated)],
+      ["Saldo h", formatHours(estimated - actual)],
+    ]);
+    return;
+  }
+
+  if (selectedView === "processes") {
+    const visible = getVisibleProcesses();
+    renderMetricItems([
+      ["Processos", visible.length],
+      ["Mensais", visible.filter((process) => process.cadence === "Mensal").length],
+      ["Semanais", visible.filter((process) => process.cadence === "Semanal").length],
+      ["Areas", new Set(visible.map((process) => process.area)).size],
+    ]);
+    return;
+  }
+
+  const visibleRoles = getVisibleRoles();
+  renderMetricItems([
+    ["Funcoes", visibleRoles.length],
+    ["Atuais", visibleRoles.filter((role) => !["comercial", "estrategista"].includes(role.personId)).length],
+    ["Futuras", visibleRoles.filter((role) => ["comercial", "estrategista"].includes(role.personId)).length],
+    ["Pessoas", selectedPersonId === "todos" ? state.people.length : 1],
+  ]);
+}
+
+function renderMetricItems(metricItems) {
+  elements.metrics.innerHTML = metricItems
+    .map(([label, value]) => `<article class="metric"><span>${label}</span><strong>${value}</strong></article>`)
+    .join("");
+}
+
+function renderMainView() {
+  elements.board.hidden = selectedView !== "demands";
+  elements.processGrid.hidden = selectedView !== "processes";
+  elements.roleGrid.hidden = selectedView !== "roles";
+
+  if (selectedView === "demands") renderBoard();
+  if (selectedView === "processes") renderProcesses();
+  if (selectedView === "roles") renderRoles();
+}
+
+function renderBoard() {
+  const visible = getVisibleDemands();
+
+  elements.board.innerHTML = statuses
+    .map((status) => {
+      const demands = visible.filter((demand) => demand.status === status);
+      const cards = demands.length ? demands.map(demandCardTemplate).join("") : `<div class="empty-state">Solte uma tarefa aqui</div>`;
+
+      return `
+        <section class="column" data-status="${status}">
+          <div class="column-header">
+            <span>${status}</span>
+            <span>${demands.length}</span>
+          </div>
+          <div class="column-cards">${cards}</div>
+        </section>
+      `;
+    })
+    .join("");
+
+  elements.board.querySelectorAll(".demand-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      if (draggedDemandId) return;
+      openDemandDialog(card.dataset.id);
+    });
+    card.addEventListener("dragstart", handleCardDragStart);
+    card.addEventListener("dragend", handleCardDragEnd);
+  });
+
+  elements.board.querySelectorAll(".column").forEach((column) => {
+    column.addEventListener("dragover", handleColumnDragOver);
+    column.addEventListener("dragleave", handleColumnDragLeave);
+    column.addEventListener("drop", handleColumnDrop);
+  });
+}
+
+function demandCardTemplate(demand) {
+  const owner = getOwner(demand.ownerId);
+  const priorityClass = demand.priority === "Alta" ? "high" : demand.priority === "Media" ? "medium" : "low";
+  const dueDate = demand.dueDate ? formatDate(demand.dueDate) : "Sem prazo";
+  const lateTag = isOverdue(demand) ? `<span class="tag high">Atrasada</span>` : "";
+  const deliveredLateTag = isDeliveredLate(demand) ? `<span class="tag high">Entrega atrasada</span>` : "";
+  const timeBalance = (Number(demand.estimatedHours) || 0) - (Number(demand.actualHours) || 0);
+  const timeClass = timeBalance < 0 ? "high" : timeBalance > 0 ? "low" : "";
+  const actualHours = Number(demand.actualHours) || 0;
+  const estimatedHours = Number(demand.estimatedHours) || 0;
+
+  return `
+    <button class="demand-card" type="button" draggable="true" data-id="${demand.id}">
+      <span class="card-cover ${priorityClass}"></span>
+      <h3 class="card-title">${escapeHtml(demand.title)}</h3>
+      <div class="card-meta">
+        <span>${escapeHtml(demand.client)}</span>
+        <span>•</span>
+        <span class="owner-pill">
+          <span class="owner-avatar" style="background:${owner?.color || "#202124"}">${getInitials(owner?.name)}</span>
+          ${escapeHtml(owner?.name || "Sem responsavel")}
+        </span>
+      </div>
+      <div class="tag-row">
+        <span class="tag ${priorityClass}">${demand.priority}</span>
+        <span class="tag">${escapeHtml(demand.stage || "Sem etapa")}</span>
+        <span class="tag">${dueDate}</span>
+      </div>
+      <div class="card-footer">
+        <span class="tag ${timeClass}">${formatHours(actualHours)}/${formatHours(estimatedHours)}h</span>
+        ${lateTag}
+        ${deliveredLateTag}
+      </div>
+    </button>
+  `;
+}
+
+function handleCardDragStart(event) {
+  draggedDemandId = event.currentTarget.dataset.id;
+  event.currentTarget.classList.add("dragging");
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", event.currentTarget.dataset.id);
+}
+
+function handleCardDragEnd(event) {
+  event.currentTarget.classList.remove("dragging");
+  elements.board.querySelectorAll(".column").forEach((column) => column.classList.remove("drag-over"));
+  window.setTimeout(() => {
+    draggedDemandId = "";
+  }, 0);
+}
+
+function handleColumnDragOver(event) {
+  event.preventDefault();
+  event.currentTarget.classList.add("drag-over");
+  event.dataTransfer.dropEffect = "move";
+}
+
+function handleColumnDragLeave(event) {
+  if (!event.currentTarget.contains(event.relatedTarget)) {
+    event.currentTarget.classList.remove("drag-over");
+  }
+}
+
+function handleColumnDrop(event) {
+  event.preventDefault();
+  const demandId = event.dataTransfer.getData("text/plain");
+  const newStatus = event.currentTarget.dataset.status;
+  const demand = state.demands.find((item) => item.id === demandId);
+
+  event.currentTarget.classList.remove("drag-over");
+  if (!demand || !newStatus || demand.status === newStatus) return;
+
+  demand.status = newStatus;
+  if (newStatus === "Concluido" && !demand.deliveredDate) {
+    demand.deliveredDate = new Date().toISOString().slice(0, 10);
+  }
+  render();
+}
+
+function renderProcesses() {
+  const visible = getVisibleProcesses();
+  elements.processGrid.innerHTML = visible.length
+    ? visible.map(processCardTemplate).join("")
+    : `<div class="empty-state">Nenhum processo encontrado</div>`;
+
+  elements.processGrid.querySelectorAll(".process-card").forEach((card) => {
+    card.addEventListener("click", () => openProcessDialog(card.dataset.id));
+  });
+}
+
+function processCardTemplate(process) {
+  const owner = getOwner(process.ownerId);
+  const checklist = (process.checklist || [])
+    .slice(0, 5)
+    .map((item) => `<li>${escapeHtml(item)}</li>`)
+    .join("");
+
+  return `
+    <button class="process-card" type="button" data-id="${process.id}">
+      <div class="process-topline">
+        <span class="tag">${escapeHtml(process.area)}</span>
+        <span class="tag">${escapeHtml(process.cadence)}</span>
+        <span>${escapeHtml(owner?.name || "Sem responsavel")}</span>
+      </div>
+      <h3>${escapeHtml(process.title)}</h3>
+      <p>${escapeHtml(process.objective)}</p>
+      <ul class="checklist">${checklist}</ul>
+    </button>
+  `;
+}
+
+function renderRoles() {
+  const visible = getVisibleRoles();
+  elements.roleGrid.innerHTML = visible.length
+    ? visible.map(roleCardTemplate).join("")
+    : `<div class="empty-state">Nenhuma funcao encontrada</div>`;
+}
+
+function roleCardTemplate(role) {
+  const person = getOwner(role.personId);
+  const responsibilities = role.responsibilities.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+
+  return `
+    <article class="role-card">
+      <div class="role-topline">
+        <span class="person-dot" style="background:${person?.color || "#202124"}"></span>
+        <span>${escapeHtml(person?.name || "Equipe")}</span>
+      </div>
+      <h3>${escapeHtml(role.title)}</h3>
+      <p>${escapeHtml(role.objective)}</p>
+      <ul class="role-list">${responsibilities}</ul>
+    </article>
+  `;
+}
+
+function openPersonDialog(personId = "") {
+  const person = state.people.find((item) => item.id === personId);
+  elements.personForm.reset();
+  elements.personId.value = person?.id || "";
+  elements.personName.value = person?.name || "";
+  elements.personRole.value = person?.role || "";
+  elements.personColor.value = person?.color || "#2f80ed";
+  elements.personDialogTitle.textContent = person ? "Editar colaborador" : "Novo colaborador";
+  elements.deletePersonButton.hidden = !person;
+  elements.personDialog.showModal();
+}
+
+function openDemandDialog(demandId = "") {
+  if (!state.people.length) {
+    openPersonDialog();
+    return;
+  }
+
+  const demand = state.demands.find((item) => item.id === demandId);
+  elements.demandForm.reset();
+  elements.demandId.value = demand?.id || "";
+  elements.demandTitle.value = demand?.title || "";
+  elements.demandClient.value = demand?.client || "";
+  elements.demandOwner.value = demand?.ownerId || (selectedPersonId !== "todos" ? selectedPersonId : state.people[0].id);
+  elements.demandStatus.value = demand?.status || "Backlog";
+  elements.demandPriority.value = demand?.priority || "Media";
+  elements.demandStage.value = demand?.stage || "Ideia";
+  elements.demandDueDate.value = demand?.dueDate || "";
+  elements.demandDeliveredDate.value = demand?.deliveredDate || "";
+  elements.demandEstimatedHours.value = demand?.estimatedHours ?? "";
+  elements.demandActualHours.value = demand?.actualHours ?? "";
+  elements.demandDescription.value = demand?.description || "";
+  elements.demandDialogTitle.textContent = demand ? "Editar demanda" : "Nova demanda";
+  elements.deleteDemandButton.hidden = !demand;
+  elements.demandDialog.showModal();
+}
+
+function openProcessDialog(processId = "") {
+  if (!state.people.length) {
+    openPersonDialog();
+    return;
+  }
+
+  const process = state.processes.find((item) => item.id === processId);
+  elements.processForm.reset();
+  elements.processId.value = process?.id || "";
+  elements.processTitle.value = process?.title || "";
+  elements.processArea.value = process?.area || "";
+  elements.processOwner.value = process?.ownerId || (selectedPersonId !== "todos" ? selectedPersonId : state.people[0].id);
+  elements.processCadence.value = process?.cadence || "Mensal";
+  elements.processObjective.value = process?.objective || "";
+  elements.processChecklist.value = (process?.checklist || []).join("\n");
+  elements.processDialogTitle.textContent = process ? "Editar processo" : "Novo processo";
+  elements.deleteProcessButton.hidden = !process;
+  elements.processDialog.showModal();
+}
+
+function savePerson(event) {
+  event.preventDefault();
+  const person = {
+    id: elements.personId.value || crypto.randomUUID(),
+    name: elements.personName.value.trim(),
+    role: elements.personRole.value.trim(),
+    color: elements.personColor.value,
+  };
+
+  if (!person.name || !person.role) return;
+
+  const index = state.people.findIndex((item) => item.id === person.id);
+  if (index >= 0) state.people[index] = person;
+  else state.people.push(person);
+
+  selectedPersonId = person.id;
+  elements.personDialog.close();
+  render();
+}
+
+function deletePerson() {
+  const personId = elements.personId.value;
+  if (!personId) return;
+
+  const hasDemands = state.demands.some((demand) => demand.ownerId === personId);
+  const hasProcesses = state.processes.some((process) => process.ownerId === personId);
+  if ((hasDemands || hasProcesses) && !confirm("Este colaborador tem demandas/processos. Excluir tambem esses itens?")) return;
+
+  state.people = state.people.filter((person) => person.id !== personId);
+  state.demands = state.demands.filter((demand) => demand.ownerId !== personId);
+  state.processes = state.processes.filter((process) => process.ownerId !== personId);
+  state.roles = state.roles.filter((role) => role.personId !== personId);
+  selectedPersonId = "todos";
+  elements.personDialog.close();
+  render();
+}
+
+function saveDemand(event) {
+  event.preventDefault();
+  const ownerId = elements.demandOwner.value;
+  const demand = {
+    id: elements.demandId.value || crypto.randomUUID(),
+    title: elements.demandTitle.value.trim(),
+    client: elements.demandClient.value.trim(),
+    ownerId,
+    status: elements.demandStatus.value,
+    priority: elements.demandPriority.value,
+    stage: elements.demandStage.value,
+    dueDate: elements.demandDueDate.value,
+    deliveredDate: elements.demandDeliveredDate.value,
+    estimatedHours: parseHours(elements.demandEstimatedHours.value),
+    actualHours: parseHours(elements.demandActualHours.value),
+    description: elements.demandDescription.value.trim(),
+  };
+
+  if (!demand.title || !demand.client || !ownerId) return;
+
+  const index = state.demands.findIndex((item) => item.id === demand.id);
+  if (index >= 0) state.demands[index] = demand;
+  else state.demands.push(demand);
+
+  elements.demandDialog.close();
+  render();
+}
+
+function deleteDemand() {
+  const demandId = elements.demandId.value;
+  state.demands = state.demands.filter((demand) => demand.id !== demandId);
+  elements.demandDialog.close();
+  render();
+}
+
+function saveProcess(event) {
+  event.preventDefault();
+  const process = {
+    id: elements.processId.value || crypto.randomUUID(),
+    title: elements.processTitle.value.trim(),
+    area: elements.processArea.value.trim(),
+    ownerId: elements.processOwner.value,
+    cadence: elements.processCadence.value,
+    objective: elements.processObjective.value.trim(),
+    checklist: elements.processChecklist.value
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  };
+
+  if (!process.title || !process.area || !process.objective) return;
+
+  const index = state.processes.findIndex((item) => item.id === process.id);
+  if (index >= 0) state.processes[index] = process;
+  else state.processes.push(process);
+
+  elements.processDialog.close();
+  render();
+}
+
+function deleteProcess() {
+  const processId = elements.processId.value;
+  state.processes = state.processes.filter((process) => process.id !== processId);
+  elements.processDialog.close();
+  render();
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "sou-demandas.json";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      if (!Array.isArray(imported.people) || !Array.isArray(imported.demands)) {
+        alert("Arquivo invalido.");
+        return;
+      }
+
+      state = {
+        people: imported.people,
+        demands: imported.demands,
+        processes: Array.isArray(imported.processes) ? imported.processes : processesSeed,
+        roles: Array.isArray(imported.roles) ? imported.roles : rolesSeed,
+      };
+      selectedPersonId = "todos";
+      render();
+    } catch {
+      alert("Nao foi possivel importar o arquivo.");
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = "";
+}
+
+function isOverdue(demand) {
+  if (!demand.dueDate || demand.status === "Concluido") return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(`${demand.dueDate}T00:00:00`) < today;
+}
+
+function isDeliveredLate(demand) {
+  if (!demand.dueDate || !demand.deliveredDate) return false;
+  return new Date(`${demand.deliveredDate}T00:00:00`) > new Date(`${demand.dueDate}T00:00:00`);
+}
+
+function sumHours(items, key) {
+  return items.reduce((total, item) => total + (Number(item[key]) || 0), 0);
+}
+
+function parseHours(value) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatHours(value) {
+  const rounded = Math.round(value * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded.toFixed(2));
+}
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(
+    new Date(`${value}T00:00:00`),
+  );
+}
+
+function escapeHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (char) => {
+    const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
+    return entities[char];
+  });
+}
+
+elements.viewTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    selectedView = tab.dataset.view;
+    render();
+  });
+});
+elements.addPersonButton.addEventListener("click", () => openPersonDialog());
+elements.addDemandButton.addEventListener("click", () => openDemandDialog());
+elements.addProcessButton.addEventListener("click", () => openProcessDialog());
+elements.personForm.addEventListener("submit", savePerson);
+elements.demandForm.addEventListener("submit", saveDemand);
+elements.processForm.addEventListener("submit", saveProcess);
+elements.deletePersonButton.addEventListener("click", deletePerson);
+elements.deleteDemandButton.addEventListener("click", deleteDemand);
+elements.deleteProcessButton.addEventListener("click", deleteProcess);
+elements.statusFilter.addEventListener("change", render);
+elements.searchInput.addEventListener("input", render);
+elements.exportButton.addEventListener("click", exportData);
+elements.importFile.addEventListener("change", importData);
+document.querySelectorAll("[data-close-dialog]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelector(`#${button.dataset.closeDialog}`)?.close();
+  });
+});
+
+render();
