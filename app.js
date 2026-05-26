@@ -1036,6 +1036,11 @@ function saveSelectedView() {
   localStorage.setItem(selectedViewKey, selectedView);
 }
 
+function setSelectedView(view, { persist = true } = {}) {
+  selectedView = ["dashboard", "clients", "demands", "processes", "roles"].includes(view) ? view : "dashboard";
+  if (persist) saveSelectedView();
+}
+
 function loadSessionSettings() {
   try {
     const saved = JSON.parse(sessionStorage.getItem(sessionSettingsKey) || "{}");
@@ -1217,7 +1222,7 @@ async function handleLogin(event) {
     profileId,
   };
   selectedPersonId = role === "collaborator" ? profileId : "todos";
-  selectedView = "dashboard";
+  setSelectedView("dashboard");
   saveSessionSettings();
   saveAccessSettings();
   render();
@@ -1261,7 +1266,7 @@ async function handleSupabaseLogin(email, password) {
     profileId: session.profileId,
   };
   selectedPersonId = session.role === "collaborator" ? session.profileId : "todos";
-  selectedView = "dashboard";
+  setSelectedView("dashboard");
   saveSessionSettings();
   saveAccessSettings();
   render();
@@ -1436,7 +1441,6 @@ function render() {
   renderAuthShell();
   if (!currentSession.authenticated) return;
   ensureAccessState();
-  saveSelectedView();
   renderAccessControls();
   renderPeople();
   renderOwnerOptions();
@@ -1491,7 +1495,7 @@ function ensureAccessState() {
   if (isCollaboratorAccess()) selectedPersonId = currentAccess.profileId || "todos";
   if (isClientAccess()) {
     selectedPersonId = "todos";
-    if (!["dashboard", "clients", "demands"].includes(selectedView)) selectedView = "dashboard";
+    if (!["dashboard", "clients", "demands"].includes(selectedView)) setSelectedView("dashboard");
   }
 
   saveAccessSettings();
@@ -2551,7 +2555,7 @@ function generateCycleDemands(event) {
 
   state.demands.push(...created);
   elements.cycleDialog.close();
-  selectedView = "demands";
+  setSelectedView("demands");
   render();
 
   if (created.length) {
@@ -2954,8 +2958,7 @@ function escapeHtml(value = "") {
 
 elements.viewTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
-    selectedView = tab.dataset.view;
-    saveSelectedView();
+    setSelectedView(tab.dataset.view);
     render();
   });
 });
@@ -2982,13 +2985,13 @@ elements.accessRole.addEventListener("change", () => {
     profileId: "",
   };
   selectedPersonId = "todos";
-  selectedView = "dashboard";
+  setSelectedView("dashboard");
   render();
 });
 elements.accessProfile.addEventListener("change", () => {
   currentAccess.profileId = elements.accessProfile.value;
   selectedPersonId = isCollaboratorAccess() ? currentAccess.profileId : "todos";
-  selectedView = "dashboard";
+  setSelectedView("dashboard");
   render();
 });
 elements.addClientButton.addEventListener("click", () => openClientDialog());
