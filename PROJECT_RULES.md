@@ -153,6 +153,10 @@ O Codex nao deve:
 - Criar dependencias novas sem autorizacao.
 - Expor dados sensiveis em documentacao publica.
 - Colocar senhas reais ou chaves de API no codigo.
+- Commitar arquivo `.env`.
+- Expor chave `service_role`.
+- Usar chave `service_role` no frontend.
+- Usar no frontend apenas chave publica/publishable, como `anon`/`publishable`.
 - Fazer push para GitHub sem confirmacao ou orientacao da usuaria.
 
 ## Principio geral
