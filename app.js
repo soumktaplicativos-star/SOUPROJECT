@@ -3,6 +3,7 @@ const storageKey = "sou-demandas-v1";
 const calendarSettingsKey = "sou-calendar-settings-v1";
 const accessSettingsKey = "sou-access-settings-v1";
 const sessionSettingsKey = "sou-session-v1";
+const selectedViewKey = "sou-selected-view-v1";
 
 const peopleSeed = [
   { id: "isabela", name: "Isabela", role: "Direcao estrategica e gestao", email: "", color: "#1864ab" },
@@ -835,7 +836,7 @@ let calendarSettings = loadCalendarSettings();
 let currentAccess = loadAccessSettings();
 let currentSession = loadSessionSettings();
 let selectedPersonId = "todos";
-let selectedView = "dashboard";
+let selectedView = loadSelectedView();
 let draggedDemandId = "";
 
 const elements = {
@@ -1026,6 +1027,15 @@ function saveAccessSettings() {
   localStorage.setItem(accessSettingsKey, JSON.stringify(currentAccess));
 }
 
+function loadSelectedView() {
+  const saved = localStorage.getItem(selectedViewKey);
+  return ["dashboard", "clients", "demands", "processes", "roles"].includes(saved) ? saved : "dashboard";
+}
+
+function saveSelectedView() {
+  localStorage.setItem(selectedViewKey, selectedView);
+}
+
 function loadSessionSettings() {
   try {
     const saved = JSON.parse(sessionStorage.getItem(sessionSettingsKey) || "{}");
@@ -1059,6 +1069,7 @@ function normalizeClient(client) {
   const services = Array.isArray(client.services) ? client.services : String(client.services || "").split("\n").filter(Boolean);
   return {
     id: client.id || crypto.randomUUID(),
+    supabaseId: client.supabaseId || "",
     name: client.name || "Cliente sem nome",
     status: client.status || "Ativo",
     ownerId: client.ownerId || peopleSeed[0].id,
@@ -1328,7 +1339,6 @@ async function restoreSupabaseSession() {
     profileId: localSession.profileId,
   };
   selectedPersonId = localSession.role === "collaborator" ? localSession.profileId : "todos";
-  selectedView = "dashboard";
   saveSessionSettings();
   saveAccessSettings();
   render();
@@ -1426,6 +1436,7 @@ function render() {
   renderAuthShell();
   if (!currentSession.authenticated) return;
   ensureAccessState();
+  saveSelectedView();
   renderAccessControls();
   renderPeople();
   renderOwnerOptions();
@@ -2180,6 +2191,107 @@ function getPriorityClass(priority) {
   return priority === "Alta" ? "high" : priority === "Baixa" ? "low" : "medium";
 }
 
+function canUseSupabaseClients() {
+  return Boolean(window.supabase?.createClient && window.hasSouSupabaseConfig?.());
+}
+
+function getSupabaseClientInstance() {
+  if (window.SOU_SUPABASE_CLIENT) return window.SOU_SUPABASE_CLIENT;
+  const config = window.assertSouSupabaseConfig();
+  window.SOU_SUPABASE_CLIENT = window.supabase.createClient(config.url, config.anonKey);
+  return window.SOU_SUPABASE_CLIENT;
+}
+
+function mapSupabaseClientToLocalClient(row) {
+  return normalizeClient({
+    id: row.id,
+    supabaseId: row.id,
+    name: row.name,
+    status: row.status,
+    financeStatus: row.finance_status,
+    notes: row.notes_internal || row.notes_client || "",
+    services: [],
+    memberIds: [],
+  });
+}
+
+function mapLocalClientToSupabasePayload(client) {
+  return {
+    name: client.name,
+    status: client.status,
+    finance_status: client.financeStatus,
+    notes_internal: client.notes,
+  };
+}
+
+async function loadSupabaseClients() {
+  if (!canUseSupabaseClients()) return [];
+  const client = getSupabaseClientInstance();
+  const { data, error } = await client.from("clients").select("*").order("name", { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map(mapSupabaseClientToLocalClient);
+}
+
+async function saveClientToSupabase(clientData) {
+  if (!canUseSupabaseClients()) return null;
+  const client = getSupabaseClientInstance();
+  const payload = mapLocalClientToSupabasePayload(clientData);
+  const query = clientData.supabaseId
+    ? client.from("clients").update(payload).eq("id", clientData.supabaseId).select("*").single()
+    : client.from("clients").insert(payload).select("*").single();
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return mapSupabaseClientToLocalClient(data);
+}
+
+async function deleteClientFromSupabase(clientData) {
+  if (!canUseSupabaseClients() || !clientData?.supabaseId) return;
+  const client = getSupabaseClientInstance();
+  const { error } = await client.from("clients").delete().eq("id", clientData.supabaseId);
+
+  if (error) throw error;
+}
+
+async function syncClientsFromSupabase() {
+  try {
+    if (!canUseSupabaseClients() || !window.SOU_SUPABASE_AUTH?.getCurrentSession) return;
+    const { session } = await window.SOU_SUPABASE_AUTH.getCurrentSession();
+    if (!session) return;
+
+    const remoteClients = await loadSupabaseClients();
+    if (!remoteClients.length) return;
+
+    const localBySupabaseId = new Map(state.clients.filter((client) => client.supabaseId).map((client) => [client.supabaseId, client]));
+    const localByName = new Map(state.clients.map((client) => [client.name.toLowerCase(), client]));
+    const mergedClients = [...state.clients];
+
+    remoteClients.forEach((remoteClient) => {
+      const existing = localBySupabaseId.get(remoteClient.supabaseId) || localByName.get(remoteClient.name.toLowerCase());
+      if (!existing) {
+        mergedClients.push(remoteClient);
+        return;
+      }
+
+      Object.assign(existing, {
+        ...existing,
+        supabaseId: remoteClient.supabaseId,
+        name: remoteClient.name,
+        status: remoteClient.status,
+        financeStatus: remoteClient.financeStatus,
+        notes: remoteClient.notes || existing.notes,
+      });
+    });
+
+    state.clients = mergedClients.map(normalizeClient);
+    saveState();
+    render();
+  } catch (error) {
+    console.log("[SOU Supabase Clients] usando clientes locais como fallback", error);
+  }
+}
+
 function openCycleDialog() {
   elements.cycleForm.reset();
   elements.cycleClient.value = state.clients[0]?.id || "";
@@ -2320,13 +2432,15 @@ function saveDemand(event) {
   syncCalendarIfEnabled([demand]);
 }
 
-function saveClient(event) {
+async function saveClient(event) {
   event.preventDefault();
   if (!isAdminAccess()) return;
   const selectedMemberIds = [...elements.clientProjectPeople.querySelectorAll("input:checked")].map((input) => input.value);
   const ownerId = elements.clientOwner.value;
+  const currentClient = state.clients.find((item) => item.id === elements.clientId.value);
   const client = {
     id: elements.clientId.value || slugify(elements.clientName.value) || crypto.randomUUID(),
+    supabaseId: currentClient?.supabaseId || "",
     name: elements.clientName.value.trim(),
     status: elements.clientStatus.value,
     ownerId,
@@ -2340,6 +2454,13 @@ function saveClient(event) {
   };
 
   if (!client.name) return;
+
+  try {
+    const supabaseClient = await saveClientToSupabase(client);
+    if (supabaseClient?.supabaseId) client.supabaseId = supabaseClient.supabaseId;
+  } catch (error) {
+    console.log("[SOU Supabase Clients] cliente salvo apenas localmente", error);
+  }
 
   const index = state.clients.findIndex((item) => item.id === client.id);
   if (index >= 0) state.clients[index] = client;
@@ -2361,14 +2482,21 @@ function openDemandFromClient() {
   openDemandDialog("", clientId);
 }
 
-function deleteClient() {
+async function deleteClient() {
   if (!isAdminAccess()) {
     alert("Apenas a direcao pode excluir clientes.");
     return;
   }
   const clientId = elements.clientId.value;
+  const client = state.clients.find((item) => item.id === clientId);
   const hasDemands = state.demands.some((demand) => demand.clientId === clientId);
   if (hasDemands && !confirm("Este cliente possui demandas vinculadas. Ao excluir o cliente, as demandas tambem serao excluidas. Deseja continuar?")) return;
+
+  try {
+    await deleteClientFromSupabase(client);
+  } catch (error) {
+    console.log("[SOU Supabase Clients] cliente excluido apenas localmente", error);
+  }
 
   state.clients = state.clients.filter((client) => client.id !== clientId);
   if (clientsSeed.some((client) => client.id === clientId)) {
@@ -2827,6 +2955,7 @@ function escapeHtml(value = "") {
 elements.viewTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     selectedView = tab.dataset.view;
+    saveSelectedView();
     render();
   });
 });
@@ -2906,3 +3035,4 @@ document.querySelectorAll("[data-close-dialog]").forEach((button) => {
 
 render();
 restoreSupabaseSession();
+syncClientsFromSupabase();
