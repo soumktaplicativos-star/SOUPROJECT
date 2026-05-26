@@ -763,6 +763,7 @@ const cycleDemandTemplates = {
 const seedData = {
   people: peopleSeed,
   clients: clientsSeed,
+  deletedClientIds: [],
   demands: [
     {
       id: crypto.randomUUID(),
@@ -966,6 +967,7 @@ function loadState() {
     return applySeedMigrations({
       people: parsed.people.length ? parsed.people.map(normalizePerson) : peopleSeed,
       clients: Array.isArray(parsed.clients) ? parsed.clients.map(normalizeClient) : clientsSeed,
+      deletedClientIds: Array.isArray(parsed.deletedClientIds) ? parsed.deletedClientIds : [],
       demands: parsed.demands.map(normalizeDemand),
       processes: Array.isArray(parsed.processes) ? parsed.processes : processesSeed,
       roles: Array.isArray(parsed.roles) ? parsed.roles : rolesSeed,
@@ -977,8 +979,9 @@ function loadState() {
 
 function applySeedMigrations(currentState) {
   const existingClientIds = new Set(currentState.clients.map((client) => client.id));
+  const deletedClientIds = new Set(currentState.deletedClientIds || []);
   const missingClients = clientsSeed
-    .filter((client) => !existingClientIds.has(client.id))
+    .filter((client) => !existingClientIds.has(client.id) && !deletedClientIds.has(client.id))
     .map((client) => structuredClone(client));
 
   return {
@@ -2341,6 +2344,7 @@ function saveClient(event) {
   const index = state.clients.findIndex((item) => item.id === client.id);
   if (index >= 0) state.clients[index] = client;
   else state.clients.push(client);
+  state.deletedClientIds = (state.deletedClientIds || []).filter((clientId) => clientId !== client.id);
 
   state.demands = state.demands.map((demand) =>
     demand.clientId === client.id ? { ...demand, client: client.name } : demand,
@@ -2358,15 +2362,22 @@ function openDemandFromClient() {
 }
 
 function deleteClient() {
-  if (!isAdminAccess()) return;
+  if (!isAdminAccess()) {
+    alert("Apenas a direcao pode excluir clientes.");
+    return;
+  }
   const clientId = elements.clientId.value;
   const hasDemands = state.demands.some((demand) => demand.clientId === clientId);
-  if (hasDemands && !confirm("Este cliente tem demandas. Excluir tambem essas demandas?")) return;
+  if (hasDemands && !confirm("Este cliente possui demandas vinculadas. Ao excluir o cliente, as demandas tambem serao excluidas. Deseja continuar?")) return;
 
   state.clients = state.clients.filter((client) => client.id !== clientId);
+  if (clientsSeed.some((client) => client.id === clientId)) {
+    state.deletedClientIds = [...new Set([...(state.deletedClientIds || []), clientId])];
+  }
   state.demands = state.demands.filter((demand) => demand.clientId !== clientId);
   elements.clientDialog.close();
   render();
+  alert("Cliente excluido com sucesso.");
 }
 
 function generateCycleDemands(event) {
@@ -2690,6 +2701,7 @@ function importData(event) {
       state = {
         people: imported.people.map(normalizePerson),
         clients: Array.isArray(imported.clients) ? imported.clients.map(normalizeClient) : clientsSeed,
+        deletedClientIds: Array.isArray(imported.deletedClientIds) ? imported.deletedClientIds : [],
         demands: imported.demands.map(normalizeDemand),
         processes: Array.isArray(imported.processes) ? imported.processes : processesSeed,
         roles: Array.isArray(imported.roles) ? imported.roles : rolesSeed,
