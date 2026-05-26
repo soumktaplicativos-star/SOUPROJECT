@@ -423,6 +423,7 @@ const elements = {
   workspaceTitle: document.querySelector("#workspaceTitle"),
   statusFilter: document.querySelector("#statusFilter"),
   searchInput: document.querySelector("#searchInput"),
+  globalSearchMirror: document.querySelector("#globalSearchMirror"),
   viewTabs: document.querySelectorAll("[data-view]"),
   addDemandButton: document.querySelector("#addDemandButton"),
   addProcessButton: document.querySelector("#addProcessButton"),
@@ -1228,7 +1229,14 @@ elements.deletePersonButton.addEventListener("click", deletePerson);
 elements.deleteDemandButton.addEventListener("click", deleteDemand);
 elements.deleteProcessButton.addEventListener("click", deleteProcess);
 elements.statusFilter.addEventListener("change", render);
-elements.searchInput.addEventListener("input", render);
+elements.searchInput.addEventListener("input", () => {
+  elements.globalSearchMirror.value = elements.searchInput.value;
+  render();
+});
+elements.globalSearchMirror.addEventListener("input", () => {
+  elements.searchInput.value = elements.globalSearchMirror.value;
+  render();
+});
 elements.exportButton.addEventListener("click", exportData);
 elements.importFile.addEventListener("change", importData);
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
