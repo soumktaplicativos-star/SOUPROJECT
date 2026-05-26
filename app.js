@@ -419,6 +419,224 @@ const checklistTemplates = {
   ],
 };
 
+const cycleDemandTemplates = {
+  Onboarding: {
+    laura: {
+      title: "Onboarding operacional do cliente",
+      stage: "Ideia",
+      estimatedHours: 2,
+      checklistKey: "onboarding",
+      description: "Criar grupo, solicitar acessos, organizar materiais iniciais e conferir pendencias.",
+    },
+    isabela: {
+      title: "Diagnostico e estrategia inicial",
+      stage: "Em cronograma",
+      estimatedHours: 3,
+      checklist: [
+        "Analisar briefing inicial",
+        "Conferir perfil e comunicacao atual",
+        "Definir objetivo inicial",
+        "Criar direcionamento estrategico",
+        "Alinhar prioridades com a equipe",
+      ],
+      description: "Diagnostico estrategico para orientar o inicio do trabalho.",
+    },
+    yasmin: {
+      title: "Conferir acessos de trafego pago",
+      stage: "Aguardando cliente",
+      estimatedHours: 1,
+      checklist: [
+        "Solicitar acesso ao Meta Business",
+        "Conferir conta de anuncios",
+        "Conferir forma de pagamento",
+        "Verificar historico de campanhas",
+        "Sinalizar bloqueios ou pendencias",
+      ],
+      description: "Validar estrutura de trafego pago quando o servico estiver contratado.",
+    },
+    clarinha: {
+      title: "Conferir contrato e situacao financeira",
+      stage: "Aguardando cliente",
+      estimatedHours: 1,
+      checklist: [
+        "Conferir contrato assinado",
+        "Confirmar vencimento e forma de pagamento",
+        "Registrar situacao financeira",
+        "Formalizar pendencias, se houver",
+      ],
+      description: "Validacao juridico/financeira de entrada do cliente.",
+    },
+  },
+  "Demandas iniciais": {
+    isabela: {
+      title: "Plano inicial de marketing",
+      stage: "Em cronograma",
+      estimatedHours: 4,
+      checklistKey: "initial",
+      description: "Criar direcao inicial, linha editorial e primeiras prioridades.",
+    },
+    estrategista: {
+      title: "Primeiros roteiros e legendas",
+      stage: "Em roteiro",
+      estimatedHours: 3,
+      checklist: [
+        "Receber direcao estrategica",
+        "Criar primeiros roteiros",
+        "Criar legendas iniciais",
+        "Definir CTAs",
+        "Enviar para revisao interna",
+      ],
+      description: "Transformar a estrategia inicial em conteudos executaveis.",
+    },
+    laura: {
+      title: "Enviar primeiros conteudos para aprovacao",
+      stage: "Enviado para aprovacao",
+      estimatedHours: 1.5,
+      checklistKey: "team",
+      description: "Organizar envio, prazo de retorno e controle de aprovacao.",
+    },
+  },
+  "Ciclo mensal": {
+    isabela: {
+      title: "Reuniao e prioridades do ciclo mensal",
+      stage: "Em cronograma",
+      estimatedHours: 3,
+      checklist: [
+        "Realizar reuniao mensal",
+        "Analisar desempenho anterior",
+        "Definir prioridades do mes",
+        "Validar direcao estrategica",
+      ],
+      description: "Definir a estrategia e prioridades do ciclo mensal.",
+    },
+    estrategista: {
+      title: "Cronograma, roteiros e legendas do mes",
+      stage: "Em roteiro",
+      estimatedHours: 6,
+      checklistKey: "monthly",
+      description: "Criar o pacote de conteudo mensal com base na estrategia.",
+    },
+    meriduarda: {
+      title: "Captacao mensal de conteudo",
+      stage: "Aguardando gravacao",
+      estimatedHours: 4,
+      checklist: [
+        "Conferir roteiros aprovados",
+        "Confirmar data e local",
+        "Conferir equipamentos",
+        "Captar videos principais",
+        "Captar takes de apoio e bastidores",
+        "Subir arquivos no Drive",
+      ],
+      description: "Executar captacao dos materiais do ciclo mensal.",
+    },
+    laura: {
+      title: "Aprovacao, ajustes e agendamento mensal",
+      stage: "Enviado para aprovacao",
+      estimatedHours: 4,
+      checklist: [
+        "Distribuir materiais para producao",
+        "Enviar conteudos para aprovacao",
+        "Registrar ajustes solicitados",
+        "Repassar ajustes para responsaveis",
+        "Agendar conteudos aprovados",
+        "Atualizar status das demandas",
+      ],
+      description: "Controlar o fluxo operacional do ciclo mensal.",
+    },
+    yasmin: {
+      title: "Planejar e acompanhar campanhas pagas",
+      stage: "Em andamento",
+      estimatedHours: 3,
+      checklist: [
+        "Alinhar objetivo comercial",
+        "Definir verba e publico",
+        "Solicitar criativos necessarios",
+        "Monitorar desempenho",
+        "Enviar aprendizados para relatorio",
+      ],
+      description: "Executar e acompanhar trafego pago do ciclo mensal.",
+    },
+  },
+  "Campanha pontual": {
+    isabela: {
+      title: "Direcao estrategica da campanha",
+      stage: "Ideia",
+      estimatedHours: 2,
+      checklist: ["Definir objetivo", "Definir oferta", "Definir mensagem", "Validar canais e prazos"],
+      description: "Definir direcao e escopo da campanha pontual.",
+    },
+    estrategista: {
+      title: "Conteudos da campanha",
+      stage: "Em roteiro",
+      estimatedHours: 3,
+      checklist: ["Criar conceito", "Criar roteiros", "Criar legendas", "Definir CTAs", "Enviar para revisao"],
+      description: "Criar materiais de conteudo para a campanha.",
+    },
+    laura: {
+      title: "Controle operacional da campanha",
+      stage: "Enviado para aprovacao",
+      estimatedHours: 2,
+      checklistKey: "team",
+      description: "Controlar prazos, aprovacoes, ajustes e agendamento da campanha.",
+    },
+  },
+  "Tráfego pago": {
+    yasmin: {
+      title: "Campanha de trafego pago",
+      stage: "Em andamento",
+      estimatedHours: 4,
+      checklist: [
+        "Definir objetivo da campanha",
+        "Conferir acessos",
+        "Definir publico e verba",
+        "Subir criativos",
+        "Monitorar resultados",
+        "Otimizar campanha",
+      ],
+      description: "Criar e otimizar campanha de trafego pago.",
+    },
+  },
+  "Captação": {
+    meriduarda: {
+      title: "Captacao de conteudo",
+      stage: "Aguardando gravacao",
+      estimatedHours: 4,
+      checklist: [
+        "Conferir roteiro",
+        "Confirmar local e horario",
+        "Conferir equipamentos",
+        "Gravar conteudos",
+        "Captar apoios",
+        "Subir arquivos",
+      ],
+      description: "Realizar captacao de conteudo do cliente.",
+    },
+  },
+  "Relatório mensal": {
+    laura: {
+      title: "Organizar relatorio mensal",
+      stage: "Relatorio",
+      estimatedHours: 2,
+      checklist: [
+        "Coletar dados organicos",
+        "Solicitar dados de trafego, se houver",
+        "Montar relatorio",
+        "Enviar para revisao",
+        "Enviar ao cliente",
+      ],
+      description: "Preparar e enviar relatorio mensal.",
+    },
+    yasmin: {
+      title: "Dados de trafego para relatorio",
+      stage: "Relatorio",
+      estimatedHours: 1.5,
+      checklist: ["Coletar metricas", "Identificar melhores campanhas", "Apontar aprendizados", "Enviar para relatorio"],
+      description: "Separar analise de midia paga para o relatorio mensal.",
+    },
+  },
+};
+
 const seedData = {
   people: peopleSeed,
   clients: clientsSeed,
@@ -509,6 +727,7 @@ const elements = {
   searchInput: document.querySelector("#searchInput"),
   globalSearchMirror: document.querySelector("#globalSearchMirror"),
   viewTabs: document.querySelectorAll("[data-view]"),
+  generateCycleButton: document.querySelector("#generateCycleButton"),
   addClientButton: document.querySelector("#addClientButton"),
   addDemandButton: document.querySelector("#addDemandButton"),
   addProcessButton: document.querySelector("#addProcessButton"),
@@ -584,6 +803,14 @@ const elements = {
   clientServices: document.querySelector("#clientServices"),
   clientNotes: document.querySelector("#clientNotes"),
   deleteClientButton: document.querySelector("#deleteClientButton"),
+  cycleDialog: document.querySelector("#cycleDialog"),
+  cycleForm: document.querySelector("#cycleForm"),
+  cycleClient: document.querySelector("#cycleClient"),
+  cycleType: document.querySelector("#cycleType"),
+  cycleProjectPriority: document.querySelector("#cycleProjectPriority"),
+  cycleDueDate: document.querySelector("#cycleDueDate"),
+  cyclePeople: document.querySelector("#cyclePeople"),
+  cycleNotes: document.querySelector("#cycleNotes"),
 };
 
 function loadState() {
@@ -808,6 +1035,7 @@ function renderOwnerOptions() {
   elements.rolePersonSelect.innerHTML = options;
   elements.clientOwner.innerHTML = options;
   elements.demandClient.innerHTML = clientOptions;
+  elements.cycleClient.innerHTML = clientOptions;
 }
 
 function renderHeader() {
@@ -1309,6 +1537,27 @@ function openClientDialog(clientId = "") {
   elements.clientDialog.showModal();
 }
 
+function openCycleDialog() {
+  elements.cycleForm.reset();
+  elements.cycleClient.value = state.clients[0]?.id || "";
+  elements.cycleProjectPriority.value = "Media";
+  elements.cyclePeople.innerHTML = state.people
+    .map(
+      (person) => `
+        <label class="person-check">
+          <input type="checkbox" value="${person.id}" checked />
+          <span class="owner-avatar" style="background:${person.color}">${getInitials(person.name)}</span>
+          <span>
+            <strong>${escapeHtml(person.name)}</strong>
+            <small>${escapeHtml(person.role)}</small>
+          </span>
+        </label>
+      `,
+    )
+    .join("");
+  elements.cycleDialog.showModal();
+}
+
 function openRoleDialog(personId) {
   const person = getOwner(personId);
   const role = state.roles.find((item) => item.personId === personId) || {
@@ -1463,6 +1712,70 @@ function deleteClient() {
   state.demands = state.demands.filter((demand) => demand.clientId !== clientId);
   elements.clientDialog.close();
   render();
+}
+
+function generateCycleDemands(event) {
+  event.preventDefault();
+  const client = getClient(elements.cycleClient.value);
+  const cycleType = elements.cycleType.value;
+  const selectedPeople = [...elements.cyclePeople.querySelectorAll("input:checked")].map((input) => input.value);
+  const templates = cycleDemandTemplates[cycleType] || {};
+  const notes = elements.cycleNotes.value.trim();
+  const created = [];
+
+  if (!client || !selectedPeople.length) return;
+
+  selectedPeople.forEach((personId) => {
+    const template = templates[personId] || defaultCycleTemplate(cycleType, personId);
+    if (!template) return;
+
+    const checklist = template.checklistKey
+      ? checklistTemplates[template.checklistKey].map((text) => ({ text, done: false }))
+      : (template.checklist || checklistTemplates.team).map((text) => ({ text, done: false }));
+
+    created.push({
+      id: crypto.randomUUID(),
+      title: template.title,
+      clientId: client.id,
+      client: client.name,
+      ownerId: personId,
+      status: "Backlog",
+      priority: template.priority || "Media",
+      projectPriority: elements.cycleProjectPriority.value,
+      flowType: cycleType,
+      stage: template.stage || "Ideia",
+      dueDate: elements.cycleDueDate.value,
+      deliveredDate: "",
+      calendarDate: "",
+      startTime: "09:00",
+      estimatedHours: template.estimatedHours || 1,
+      actualHours: 0,
+      checklist,
+      description: [template.description || "", notes].filter(Boolean).join("\n"),
+    });
+  });
+
+  state.demands.push(...created);
+  elements.cycleDialog.close();
+  selectedView = "demands";
+  render();
+
+  if (created.length) {
+    alert(`${created.length} demandas criadas para ${client.name}.`);
+  }
+}
+
+function defaultCycleTemplate(cycleType, personId) {
+  const person = getOwner(personId);
+  if (!person) return null;
+
+  return {
+    title: `${cycleType} - ${person.name}`,
+    stage: "Ideia",
+    estimatedHours: 1,
+    checklistKey: "team",
+    description: `Demanda criada para ${person.name} dentro do ciclo ${cycleType}.`,
+  };
 }
 
 function saveRole(event) {
@@ -1859,6 +2172,8 @@ elements.testCalendarSyncButton.addEventListener("click", () => {
 elements.addClientButton.addEventListener("click", () => openClientDialog());
 elements.clientForm.addEventListener("submit", saveClient);
 elements.deleteClientButton.addEventListener("click", deleteClient);
+elements.generateCycleButton.addEventListener("click", openCycleDialog);
+elements.cycleForm.addEventListener("submit", generateCycleDemands);
 elements.addPersonButton.addEventListener("click", () => openPersonDialog());
 elements.addDemandButton.addEventListener("click", () => openDemandDialog());
 elements.addProcessButton.addEventListener("click", () => openProcessDialog());

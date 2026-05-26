@@ -78,6 +78,7 @@
             <p class="eyebrow" id="selectedPersonLabel">Todas as demandas</p>
             <h2 id="workspaceTitle">Painel da equipe</h2>
           </div>
+          <button class="ghost-button" id="generateCycleButton" type="button">Gerar ciclo</button>
           <button class="primary-button" id="addClientButton" type="button" hidden>Novo cliente</button>
           <button class="primary-button" id="addDemandButton" type="button">Nova demanda</button>
           <button class="primary-button" id="addProcessButton" type="button" hidden>Novo processo</button>
@@ -371,6 +372,58 @@
         <div class="modal-actions">
           <button class="ghost-button danger" id="deleteClientButton" type="button">Excluir</button>
           <button class="primary-button" value="default" type="submit">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="cycleDialog">
+      <form method="dialog" class="modal-form wide" id="cycleForm">
+        <div class="modal-header">
+          <h2>Gerar demandas por ciclo</h2>
+          <button class="icon-button" data-close-dialog="cycleDialog" title="Fechar" type="button">×</button>
+        </div>
+        <div class="field-grid">
+          <label>
+            Cliente
+            <select id="cycleClient" required></select>
+          </label>
+          <label>
+            Ciclo/processo
+            <select id="cycleType">
+              <option>Onboarding</option>
+              <option>Demandas iniciais</option>
+              <option>Ciclo mensal</option>
+              <option>Campanha pontual</option>
+              <option>Tráfego pago</option>
+              <option>Captação</option>
+              <option>Relatório mensal</option>
+            </select>
+          </label>
+          <label>
+            Prioridade do projeto
+            <select id="cycleProjectPriority">
+              <option>Critico</option>
+              <option>Alta</option>
+              <option selected>Media</option>
+              <option>Baixa</option>
+            </select>
+          </label>
+          <label>
+            Prazo base
+            <input id="cycleDueDate" type="date" />
+          </label>
+        </div>
+        <label>
+          Pessoas envolvidas
+          <div class="people-check-grid" id="cyclePeople"></div>
+        </label>
+        <label>
+          Observacoes para todas as demandas
+          <textarea id="cycleNotes" rows="3" maxlength="500"></textarea>
+        </label>
+        <div class="modal-actions">
+          <span class="form-hint">As demandas serao criadas no Backlog com checklist por funcao.</span>
+          <button class="primary-button" value="default" type="submit">Criar demandas</button>
         </div>
       </form>
     </dialog>

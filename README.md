@@ -12,6 +12,7 @@ Abra o arquivo `index.html` no navegador.
 - Registrar e-mail dos colaboradores para agenda.
 - Acompanhar um dashboard executivo da operacao.
 - Cadastrar clientes ativos/inativos, servicos contratados e situacao juridico/financeira.
+- Gerar demandas automaticamente por ciclo/processo selecionando as pessoas envolvidas.
 - Criar, editar e excluir demandas.
 - Ver demandas por cliente, colaborador ou pela equipe toda.
 - Registrar etapa, prazo, entrega real, tempo previsto e tempo gasto por demanda.
