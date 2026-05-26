@@ -408,15 +408,17 @@ const seedData = {
 
 let state = loadState();
 let selectedPersonId = "todos";
-let selectedView = "demands";
+let selectedView = "dashboard";
 let draggedDemandId = "";
 
 const elements = {
   personList: document.querySelector("#personList"),
+  dashboardGrid: document.querySelector("#dashboardGrid"),
   board: document.querySelector("#board"),
   processGrid: document.querySelector("#processGrid"),
   roleGrid: document.querySelector("#roleGrid"),
   metrics: document.querySelector("#metrics"),
+  pageHeadline: document.querySelector("#pageHeadline"),
   selectedPersonLabel: document.querySelector("#selectedPersonLabel"),
   workspaceTitle: document.querySelector("#workspaceTitle"),
   statusFilter: document.querySelector("#statusFilter"),
@@ -589,16 +591,25 @@ function renderOwnerOptions() {
 function renderHeader() {
   const person = selectedPersonId === "todos" ? null : getOwner(selectedPersonId);
   const viewLabels = {
+    dashboard: person ? "Resumo do colaborador" : "Visao geral da operacao",
     demands: person ? "Demandas do colaborador" : "Todas as demandas",
     processes: person ? "Processos do colaborador" : "Processos da agencia",
     roles: person ? "Funcao do colaborador" : "Funcoes da equipe",
   };
   const viewTitles = {
+    dashboard: person ? person.name : "Painel executivo",
     demands: person ? person.name : "Painel da equipe",
     processes: person ? person.name : "Processos internos",
     roles: person ? person.name : "Responsabilidades",
   };
+  const pageTitles = {
+    dashboard: "Dashboard",
+    demands: "Demandas",
+    processes: "Processos",
+    roles: "Funcoes",
+  };
 
+  elements.pageHeadline.textContent = pageTitles[selectedView];
   elements.selectedPersonLabel.textContent = viewLabels[selectedView];
   elements.workspaceTitle.textContent = viewTitles[selectedView];
   elements.addDemandButton.hidden = selectedView !== "demands";
@@ -610,6 +621,21 @@ function renderHeader() {
 }
 
 function renderMetrics() {
+  if (selectedView === "dashboard") {
+    const visible = getVisibleDemands();
+    const estimated = sumHours(visible, "estimatedHours");
+    const actual = sumHours(visible, "actualHours");
+    const done = visible.filter((demand) => demand.status === "Concluido").length;
+    const productivity = estimated ? Math.round((actual / estimated) * 100) : 0;
+    renderMetricItems([
+      ["Demandas ativas", visible.filter((demand) => demand.status !== "Concluido").length],
+      ["Concluidas", done],
+      ["Uso do tempo", `${productivity}%`],
+      ["Atrasadas", visible.filter((demand) => isOverdue(demand)).length],
+    ]);
+    return;
+  }
+
   if (selectedView === "demands") {
     const visible = getVisibleDemands();
     const estimated = sumHours(visible, "estimatedHours");
@@ -650,13 +676,111 @@ function renderMetricItems(metricItems) {
 }
 
 function renderMainView() {
+  elements.dashboardGrid.hidden = selectedView !== "dashboard";
   elements.board.hidden = selectedView !== "demands";
   elements.processGrid.hidden = selectedView !== "processes";
   elements.roleGrid.hidden = selectedView !== "roles";
 
+  if (selectedView === "dashboard") renderDashboard();
   if (selectedView === "demands") renderBoard();
   if (selectedView === "processes") renderProcesses();
   if (selectedView === "roles") renderRoles();
+}
+
+function renderDashboard() {
+  const demands = getVisibleDemands();
+  const activeDemands = demands.filter((demand) => demand.status !== "Concluido");
+  const upcoming = [...activeDemands]
+    .filter((demand) => demand.dueDate)
+    .sort((a, b) => new Date(`${a.dueDate}T00:00:00`) - new Date(`${b.dueDate}T00:00:00`))
+    .slice(0, 5);
+  const workload = state.people
+    .map((person) => {
+      const personDemands = demands.filter((demand) => demand.ownerId === person.id && demand.status !== "Concluido");
+      return {
+        person,
+        count: personDemands.length,
+        hours: sumHours(personDemands, "estimatedHours"),
+      };
+    })
+    .filter((item) => item.count || selectedPersonId !== "todos")
+    .sort((a, b) => b.count - a.count);
+  const maxWorkload = Math.max(1, ...workload.map((item) => item.count));
+  const stageCounts = countBy(activeDemands, "stage");
+  const statusCounts = countBy(demands, "status");
+
+  elements.dashboardGrid.innerHTML = `
+    <article class="dashboard-panel wide-panel">
+      <h3>Saude da operacao</h3>
+      <div class="stage-cloud">
+        ${statuses
+          .map((status) => `<span class="tag">${escapeHtml(status)}: ${statusCounts[status] || 0}</span>`)
+          .join("")}
+      </div>
+    </article>
+
+    <article class="dashboard-panel">
+      <h3>Carga por colaborador</h3>
+      <div class="workload-list">
+        ${
+          workload.length
+            ? workload.map((item) => workloadRowTemplate(item, maxWorkload)).join("")
+            : `<p>Nenhuma demanda ativa no filtro atual.</p>`
+        }
+      </div>
+    </article>
+
+    <article class="dashboard-panel">
+      <h3>Proximas entregas</h3>
+      <div class="deadline-list">
+        ${
+          upcoming.length
+            ? upcoming.map(deadlineCardTemplate).join("")
+            : `<p>Nenhuma entrega com prazo definido.</p>`
+        }
+      </div>
+    </article>
+
+    <article class="dashboard-panel wide-panel">
+      <h3>Etapas com trabalho em andamento</h3>
+      <div class="insight-list">
+        ${
+          Object.keys(stageCounts).length
+            ? Object.entries(stageCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([stage, count]) => `<div class="insight-card"><strong>${escapeHtml(stage || "Sem etapa")}</strong><p>${count} demanda${count === 1 ? "" : "s"} nessa etapa.</p></div>`)
+                .join("")
+            : `<p>Sem demandas ativas para analisar.</p>`
+        }
+      </div>
+    </article>
+  `;
+}
+
+function workloadRowTemplate(item, maxWorkload) {
+  const width = Math.max(8, Math.round((item.count / maxWorkload) * 100));
+  return `
+    <div class="workload-row">
+      <span class="owner-pill">
+        <span class="owner-avatar" style="background:${item.person.color}">${getInitials(item.person.name)}</span>
+        ${escapeHtml(item.person.name)}
+      </span>
+      <span class="progress-track"><span class="progress-fill" style="width:${width}%"></span></span>
+      <span class="tag">${item.count} tarefas / ${formatHours(item.hours)}h</span>
+    </div>
+  `;
+}
+
+function deadlineCardTemplate(demand) {
+  const owner = getOwner(demand.ownerId);
+  const late = isOverdue(demand) ? " high" : "";
+  return `
+    <div class="deadline-card">
+      <strong>${escapeHtml(demand.title)}</strong>
+      <p>${escapeHtml(demand.client)} - ${escapeHtml(owner?.name || "Sem responsavel")}</p>
+      <span class="tag${late}">${formatDate(demand.dueDate)}</span>
+    </div>
+  `;
 }
 
 function renderBoard() {
@@ -1061,6 +1185,24 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(
     new Date(`${value}T00:00:00`),
   );
+}
+
+function countBy(items, key) {
+  return items.reduce((counts, item) => {
+    const value = item[key] || "Sem etapa";
+    counts[value] = (counts[value] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function getInitials(name = "") {
+  return String(name)
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }
 
 function escapeHtml(value = "") {

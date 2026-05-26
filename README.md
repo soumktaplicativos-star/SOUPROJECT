@@ -9,10 +9,12 @@ Abra o arquivo `index.html` no navegador.
 ## O que da para fazer
 
 - Cadastrar, editar e excluir colaboradores.
+- Acompanhar um dashboard executivo da operacao.
 - Criar, editar e excluir demandas.
 - Ver demandas por colaborador ou pela equipe toda.
 - Registrar etapa, prazo, entrega real, tempo previsto e tempo gasto por demanda.
 - Medir saldo de horas para acompanhar produtividade por pessoa e etapa.
+- Arrastar demandas entre colunas no estilo Trello/Kanban.
 - Ver e editar processos internos da agencia.
 - Consultar a definicao de funcoes e responsabilidades por pessoa.
 - Filtrar por status e buscar por cliente, tarefa ou responsavel.

@@ -7,25 +7,23 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Agencia de marketing</p>
-        <h1>SOU Demandas</h1>
-      </div>
-      <nav class="view-tabs" aria-label="Visoes da plataforma">
-        <button class="tab-button active" data-view="demands" type="button">Demandas</button>
-        <button class="tab-button" data-view="processes" type="button">Processos</button>
-        <button class="tab-button" data-view="roles" type="button">Funcoes</button>
-      </nav>
-      <div class="topbar-actions">
-        <button class="ghost-button" id="exportButton" type="button">Exportar</button>
-        <label class="primary-button" for="importFile">Importar</label>
-        <input id="importFile" type="file" accept="application/json" hidden />
-      </div>
-    </header>
-
     <main class="app-shell">
       <aside class="sidebar">
+        <div class="brand-block">
+          <span class="brand-mark">S</span>
+          <div>
+            <p class="eyebrow">SOU Marketing</p>
+            <h1>SOU Ops</h1>
+          </div>
+        </div>
+
+        <nav class="view-tabs" aria-label="Visoes da plataforma">
+          <button class="tab-button active" data-view="dashboard" type="button">Dashboard</button>
+          <button class="tab-button" data-view="demands" type="button">Demandas</button>
+          <button class="tab-button" data-view="processes" type="button">Processos</button>
+          <button class="tab-button" data-view="roles" type="button">Funcoes</button>
+        </nav>
+
         <section class="panel">
           <div class="panel-header">
             <h2>Colaboradores</h2>
@@ -56,6 +54,18 @@
       </aside>
 
       <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Operacao da agencia</p>
+            <h2 id="pageHeadline">Dashboard</h2>
+          </div>
+          <div class="topbar-actions">
+            <button class="ghost-button" id="exportButton" type="button">Exportar</button>
+            <label class="primary-button" for="importFile">Importar</label>
+            <input id="importFile" type="file" accept="application/json" hidden />
+          </div>
+        </header>
+
         <div class="workspace-header">
           <div>
             <p class="eyebrow" id="selectedPersonLabel">Todas as demandas</p>
@@ -67,6 +77,7 @@
 
         <section class="metrics" id="metrics"></section>
 
+        <section class="dashboard-grid" id="dashboardGrid"></section>
         <section class="board" id="board"></section>
         <section class="process-grid" id="processGrid" hidden></section>
         <section class="role-grid" id="roleGrid" hidden></section>
