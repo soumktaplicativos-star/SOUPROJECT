@@ -15,8 +15,10 @@ Abra o arquivo `index.html` no navegador.
 - Registrar etapa, prazo, entrega real, tempo previsto e tempo gasto por demanda.
 - Medir saldo de horas para acompanhar produtividade por pessoa e etapa.
 - Arrastar demandas entre colunas no estilo Trello/Kanban.
+- Classificar demandas por prioridade de projeto e prioridade da tarefa.
+- Adicionar checklist por demanda com modelos rapidos de onboarding, demandas iniciais, ciclo mensal e equipe.
 - Ver e editar processos internos da agencia.
-- Consultar a definicao de funcoes e responsabilidades por pessoa.
+- Consultar e editar a definicao de funcoes e responsabilidades por pessoa.
 - Filtrar por status e buscar por cliente, tarefa ou responsavel.
 - Acompanhar quantidade total, em andamento, aguardando e atrasadas.
 - Exportar os dados em JSON.

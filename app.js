@@ -356,6 +356,56 @@ const rolesSeed = [
   },
 ];
 
+const checklistTemplates = {
+  onboarding: [
+    "Criar grupo do cliente",
+    "Enviar mensagem de boas-vindas",
+    "Solicitar acessos principais",
+    "Conferir login, senha e permissoes",
+    "Organizar pasta do cliente",
+    "Conferir formulario inicial",
+    "Registrar briefing e escopo contratado",
+    "Definir responsaveis internos",
+    "Agendar proxima reuniao mensal",
+  ],
+  initial: [
+    "Analisar briefing do cliente",
+    "Conferir acessos e historico",
+    "Criar plano de marketing inicial",
+    "Definir linha editorial",
+    "Definir primeiros temas do cronograma",
+    "Criar roteiros ou direcionamentos iniciais",
+    "Enviar primeiros conteudos para aprovacao",
+    "Registrar ajustes e aprovacoes",
+  ],
+  monthly: [
+    "Realizar reuniao mensal de alinhamento",
+    "Analisar desempenho do mes anterior",
+    "Definir prioridades do mes",
+    "Planejar cronograma mensal",
+    "Validar cronograma internamente",
+    "Enviar cronograma para cliente",
+    "Criar roteiros, legendas e direcionamentos",
+    "Planejar captacao mensal",
+    "Distribuir producao para responsaveis",
+    "Revisar internamente",
+    "Enviar para aprovacao do cliente",
+    "Executar ajustes",
+    "Agendar publicacoes aprovadas",
+    "Montar relatorio mensal",
+  ],
+  team: [
+    "Definir responsavel principal",
+    "Definir apoio da equipe",
+    "Confirmar prazo interno",
+    "Confirmar prazo de entrega ao cliente",
+    "Registrar arquivos e links necessarios",
+    "Validar etapa anterior antes de executar",
+    "Atualizar status no quadro",
+    "Sinalizar gargalos ou pendencias",
+  ],
+};
+
 const seedData = {
   people: peopleSeed,
   demands: [
@@ -366,11 +416,14 @@ const seedData = {
       ownerId: "isabela",
       status: "Em andamento",
       priority: "Alta",
+      projectPriority: "Alta",
+      flowType: "Ciclo mensal",
       stage: "Em cronograma",
       dueDate: "",
       deliveredDate: "",
       estimatedHours: 3,
       actualHours: 0,
+      checklist: checklistTemplates.monthly.slice(0, 6).map((text) => ({ text, done: false })),
       description: "Definir objetivo do mes, temas e prioridades do cliente.",
     },
     {
@@ -380,11 +433,14 @@ const seedData = {
       ownerId: "laura",
       status: "Backlog",
       priority: "Media",
+      projectPriority: "Media",
+      flowType: "Ciclo mensal",
       stage: "Enviado para aprovacao",
       dueDate: "",
       deliveredDate: "",
       estimatedHours: 1.5,
       actualHours: 0,
+      checklist: checklistTemplates.team.slice(0, 5).map((text) => ({ text, done: false })),
       description: "Separar materiais finalizados, enviar link e registrar prazo de retorno.",
     },
     {
@@ -394,11 +450,14 @@ const seedData = {
       ownerId: "yasmin",
       status: "Aguardando",
       priority: "Alta",
+      projectPriority: "Alta",
+      flowType: "Projeto pontual",
       stage: "Aguardando cliente",
       dueDate: "",
       deliveredDate: "",
       estimatedHours: 2,
       actualHours: 0,
+      checklist: checklistTemplates.team.slice(0, 4).map((text) => ({ text, done: false })),
       description: "Aguardando confirmacao de verba para escalar os conjuntos.",
     },
   ],
@@ -447,12 +506,15 @@ const elements = {
   demandOwner: document.querySelector("#demandOwner"),
   demandStatus: document.querySelector("#demandStatus"),
   demandPriority: document.querySelector("#demandPriority"),
+  demandProjectPriority: document.querySelector("#demandProjectPriority"),
+  demandFlowType: document.querySelector("#demandFlowType"),
   demandStage: document.querySelector("#demandStage"),
   demandDueDate: document.querySelector("#demandDueDate"),
   demandDeliveredDate: document.querySelector("#demandDeliveredDate"),
   demandEstimatedHours: document.querySelector("#demandEstimatedHours"),
   demandActualHours: document.querySelector("#demandActualHours"),
   demandDescription: document.querySelector("#demandDescription"),
+  demandChecklist: document.querySelector("#demandChecklist"),
   deleteDemandButton: document.querySelector("#deleteDemandButton"),
   processDialog: document.querySelector("#processDialog"),
   processForm: document.querySelector("#processForm"),
@@ -465,6 +527,15 @@ const elements = {
   processObjective: document.querySelector("#processObjective"),
   processChecklist: document.querySelector("#processChecklist"),
   deleteProcessButton: document.querySelector("#deleteProcessButton"),
+  roleDialog: document.querySelector("#roleDialog"),
+  roleForm: document.querySelector("#roleForm"),
+  roleDialogTitle: document.querySelector("#roleDialogTitle"),
+  rolePersonId: document.querySelector("#rolePersonId"),
+  rolePersonSelect: document.querySelector("#rolePersonSelect"),
+  roleTitle: document.querySelector("#roleTitle"),
+  roleObjective: document.querySelector("#roleObjective"),
+  roleResponsibilities: document.querySelector("#roleResponsibilities"),
+  editRolePersonButton: document.querySelector("#editRolePersonButton"),
 };
 
 function loadState() {
@@ -477,7 +548,7 @@ function loadState() {
 
     return {
       people: parsed.people.length ? parsed.people : peopleSeed,
-      demands: parsed.demands,
+      demands: parsed.demands.map(normalizeDemand),
       processes: Array.isArray(parsed.processes) ? parsed.processes : processesSeed,
       roles: Array.isArray(parsed.roles) ? parsed.roles : rolesSeed,
     };
@@ -488,6 +559,28 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(storageKey, JSON.stringify(state));
+}
+
+function normalizeDemand(demand) {
+  return {
+    ...demand,
+    projectPriority: demand.projectPriority || demand.priority || "Media",
+    flowType: demand.flowType || "Ciclo mensal",
+    checklist: normalizeChecklist(demand.checklist),
+  };
+}
+
+function normalizeChecklist(checklist = []) {
+  if (!Array.isArray(checklist)) return [];
+  return checklist
+    .map((item) => {
+      if (typeof item === "string") {
+        const done = /^\s*\[(x|X)\]\s*/.test(item);
+        return { text: item.replace(/^\s*\[( |x|X)\]\s*/, "").trim(), done };
+      }
+      return { text: String(item.text || "").trim(), done: Boolean(item.done) };
+    })
+    .filter((item) => item.text);
 }
 
 function getOwner(ownerId) {
@@ -502,7 +595,18 @@ function getVisibleDemands() {
     const owner = getOwner(demand.ownerId);
     const personMatch = selectedPersonId === "todos" || demand.ownerId === selectedPersonId;
     const statusMatch = status === "todos" || demand.status === status;
-    const searchText = [demand.title, demand.client, owner?.name, demand.stage, demand.description].join(" ").toLowerCase();
+    const searchText = [
+      demand.title,
+      demand.client,
+      owner?.name,
+      demand.stage,
+      demand.flowType,
+      demand.projectPriority,
+      demand.description,
+      ...normalizeChecklist(demand.checklist).map((item) => item.text),
+    ]
+      .join(" ")
+      .toLowerCase();
 
     return personMatch && statusMatch && searchText.includes(search);
   });
@@ -587,6 +691,7 @@ function renderOwnerOptions() {
   const options = state.people.map((person) => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
   elements.demandOwner.innerHTML = options;
   elements.processOwner.innerHTML = options;
+  elements.rolePersonSelect.innerHTML = options;
 }
 
 function renderHeader() {
@@ -823,6 +928,8 @@ function renderBoard() {
 function demandCardTemplate(demand) {
   const owner = getOwner(demand.ownerId);
   const priorityClass = demand.priority === "Alta" ? "high" : demand.priority === "Media" ? "medium" : "low";
+  const projectPriorityClass =
+    demand.projectPriority === "Critico" ? "critical" : demand.projectPriority === "Alta" ? "high" : demand.projectPriority === "Media" ? "medium" : "low";
   const dueDate = demand.dueDate ? formatDate(demand.dueDate) : "Sem prazo";
   const lateTag = isOverdue(demand) ? `<span class="tag high">Atrasada</span>` : "";
   const deliveredLateTag = isDeliveredLate(demand) ? `<span class="tag high">Entrega atrasada</span>` : "";
@@ -830,10 +937,13 @@ function demandCardTemplate(demand) {
   const timeClass = timeBalance < 0 ? "high" : timeBalance > 0 ? "low" : "";
   const actualHours = Number(demand.actualHours) || 0;
   const estimatedHours = Number(demand.estimatedHours) || 0;
+  const checklist = normalizeChecklist(demand.checklist);
+  const doneItems = checklist.filter((item) => item.done).length;
+  const checklistText = checklist.length ? `${doneItems}/${checklist.length}` : "0/0";
 
   return `
     <button class="demand-card" type="button" draggable="true" data-id="${demand.id}">
-      <span class="card-cover ${priorityClass}"></span>
+      <span class="card-cover ${projectPriorityClass}"></span>
       <h3 class="card-title">${escapeHtml(demand.title)}</h3>
       <div class="card-meta">
         <span>${escapeHtml(demand.client)}</span>
@@ -844,11 +954,14 @@ function demandCardTemplate(demand) {
         </span>
       </div>
       <div class="tag-row">
-        <span class="tag ${priorityClass}">${demand.priority}</span>
+        <span class="tag ${projectPriorityClass}">Projeto ${escapeHtml(demand.projectPriority || "Media")}</span>
+        <span class="tag ${priorityClass}">Tarefa ${demand.priority}</span>
+        <span class="tag">${escapeHtml(demand.flowType || "Ciclo mensal")}</span>
         <span class="tag">${escapeHtml(demand.stage || "Sem etapa")}</span>
         <span class="tag">${dueDate}</span>
       </div>
       <div class="card-footer">
+        <span class="tag">Checklist ${checklistText}</span>
         <span class="tag ${timeClass}">${formatHours(actualHours)}/${formatHours(estimatedHours)}h</span>
         ${lateTag}
         ${deliveredLateTag}
@@ -937,6 +1050,10 @@ function renderRoles() {
   elements.roleGrid.innerHTML = visible.length
     ? visible.map(roleCardTemplate).join("")
     : `<div class="empty-state">Nenhuma funcao encontrada</div>`;
+
+  elements.roleGrid.querySelectorAll(".role-card").forEach((card) => {
+    card.addEventListener("click", () => openRoleDialog(card.dataset.personId));
+  });
 }
 
 function roleCardTemplate(role) {
@@ -944,7 +1061,7 @@ function roleCardTemplate(role) {
   const responsibilities = role.responsibilities.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
 
   return `
-    <article class="role-card">
+    <button class="role-card" type="button" data-person-id="${role.personId}">
       <div class="role-topline">
         <span class="person-dot" style="background:${person?.color || "#202124"}"></span>
         <span>${escapeHtml(person?.name || "Equipe")}</span>
@@ -952,7 +1069,7 @@ function roleCardTemplate(role) {
       <h3>${escapeHtml(role.title)}</h3>
       <p>${escapeHtml(role.objective)}</p>
       <ul class="role-list">${responsibilities}</ul>
-    </article>
+    </button>
   `;
 }
 
@@ -982,15 +1099,37 @@ function openDemandDialog(demandId = "") {
   elements.demandOwner.value = demand?.ownerId || (selectedPersonId !== "todos" ? selectedPersonId : state.people[0].id);
   elements.demandStatus.value = demand?.status || "Backlog";
   elements.demandPriority.value = demand?.priority || "Media";
+  elements.demandProjectPriority.value = demand?.projectPriority || demand?.priority || "Media";
+  elements.demandFlowType.value = demand?.flowType || "Ciclo mensal";
   elements.demandStage.value = demand?.stage || "Ideia";
   elements.demandDueDate.value = demand?.dueDate || "";
   elements.demandDeliveredDate.value = demand?.deliveredDate || "";
   elements.demandEstimatedHours.value = demand?.estimatedHours ?? "";
   elements.demandActualHours.value = demand?.actualHours ?? "";
   elements.demandDescription.value = demand?.description || "";
+  elements.demandChecklist.value = checklistToText(demand?.checklist || []);
   elements.demandDialogTitle.textContent = demand ? "Editar demanda" : "Nova demanda";
   elements.deleteDemandButton.hidden = !demand;
   elements.demandDialog.showModal();
+}
+
+function openRoleDialog(personId) {
+  const person = getOwner(personId);
+  const role = state.roles.find((item) => item.personId === personId) || {
+    personId,
+    title: person?.role || "",
+    objective: "",
+    responsibilities: [],
+  };
+
+  elements.roleForm.reset();
+  elements.rolePersonId.value = personId;
+  elements.rolePersonSelect.value = personId;
+  elements.roleTitle.value = role.title || person?.role || "";
+  elements.roleObjective.value = role.objective || "";
+  elements.roleResponsibilities.value = (role.responsibilities || []).join("\n");
+  elements.roleDialogTitle.textContent = `Editar funcao - ${person?.name || "Equipe"}`;
+  elements.roleDialog.showModal();
 }
 
 function openProcessDialog(processId = "") {
@@ -1028,6 +1167,9 @@ function savePerson(event) {
   if (index >= 0) state.people[index] = person;
   else state.people.push(person);
 
+  const role = state.roles.find((item) => item.personId === person.id);
+  if (role && !role.title) role.title = person.role;
+
   selectedPersonId = person.id;
   elements.personDialog.close();
   render();
@@ -1060,11 +1202,14 @@ function saveDemand(event) {
     ownerId,
     status: elements.demandStatus.value,
     priority: elements.demandPriority.value,
+    projectPriority: elements.demandProjectPriority.value,
+    flowType: elements.demandFlowType.value,
     stage: elements.demandStage.value,
     dueDate: elements.demandDueDate.value,
     deliveredDate: elements.demandDeliveredDate.value,
     estimatedHours: parseHours(elements.demandEstimatedHours.value),
     actualHours: parseHours(elements.demandActualHours.value),
+    checklist: parseChecklistText(elements.demandChecklist.value),
     description: elements.demandDescription.value.trim(),
   };
 
@@ -1078,11 +1223,52 @@ function saveDemand(event) {
   render();
 }
 
+function saveRole(event) {
+  event.preventDefault();
+  const originalPersonId = elements.rolePersonId.value;
+  const personId = elements.rolePersonSelect.value;
+  const role = {
+    personId,
+    title: elements.roleTitle.value.trim(),
+    objective: elements.roleObjective.value.trim(),
+    responsibilities: elements.roleResponsibilities.value
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  };
+
+  if (!role.title || !role.objective) return;
+
+  state.roles = state.roles.filter((item) => item.personId !== originalPersonId && item.personId !== personId);
+  state.roles.push(role);
+
+  const person = getOwner(personId);
+  if (person) person.role = role.title;
+
+  elements.roleDialog.close();
+  render();
+}
+
 function deleteDemand() {
   const demandId = elements.demandId.value;
   state.demands = state.demands.filter((demand) => demand.id !== demandId);
   elements.demandDialog.close();
   render();
+}
+
+function applyChecklistTemplate(templateKey) {
+  const template = checklistTemplates[templateKey] || [];
+  const existing = elements.demandChecklist.value.trim();
+  const nextText = template.map((item) => `[ ] ${item}`).join("\n");
+  elements.demandChecklist.value = existing ? `${existing}\n${nextText}` : nextText;
+
+  const flowByTemplate = {
+    onboarding: "Onboarding",
+    initial: "Demandas iniciais",
+    monthly: "Ciclo mensal",
+    team: elements.demandFlowType.value,
+  };
+  if (flowByTemplate[templateKey]) elements.demandFlowType.value = flowByTemplate[templateKey];
 }
 
 function saveProcess(event) {
@@ -1177,6 +1363,25 @@ function parseHours(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function parseChecklistText(value = "") {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const done = /^\[(x|X)\]\s*/.test(line);
+      const text = line.replace(/^\[( |x|X)\]\s*/, "").trim();
+      return { text, done };
+    })
+    .filter((item) => item.text);
+}
+
+function checklistToText(checklist = []) {
+  return normalizeChecklist(checklist)
+    .map((item) => `[${item.done ? "x" : " "}] ${item.text}`)
+    .join("\n");
+}
+
 function formatHours(value) {
   const rounded = Math.round(value * 100) / 100;
   return Number.isInteger(rounded) ? String(rounded) : String(rounded.toFixed(2));
@@ -1225,9 +1430,18 @@ elements.addProcessButton.addEventListener("click", () => openProcessDialog());
 elements.personForm.addEventListener("submit", savePerson);
 elements.demandForm.addEventListener("submit", saveDemand);
 elements.processForm.addEventListener("submit", saveProcess);
+elements.roleForm.addEventListener("submit", saveRole);
 elements.deletePersonButton.addEventListener("click", deletePerson);
 elements.deleteDemandButton.addEventListener("click", deleteDemand);
 elements.deleteProcessButton.addEventListener("click", deleteProcess);
+elements.editRolePersonButton.addEventListener("click", () => {
+  const personId = elements.rolePersonSelect.value;
+  elements.roleDialog.close();
+  openPersonDialog(personId);
+});
+document.querySelectorAll("[data-checklist-template]").forEach((button) => {
+  button.addEventListener("click", () => applyChecklistTemplate(button.dataset.checklistTemplate));
+});
 elements.statusFilter.addEventListener("change", render);
 elements.searchInput.addEventListener("input", () => {
   elements.globalSearchMirror.value = elements.searchInput.value;

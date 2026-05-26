@@ -151,6 +151,25 @@
             </select>
           </label>
           <label>
+            Prioridade do projeto
+            <select id="demandProjectPriority">
+              <option>Critico</option>
+              <option>Alta</option>
+              <option>Media</option>
+              <option>Baixa</option>
+            </select>
+          </label>
+          <label>
+            Tipo de fluxo
+            <select id="demandFlowType">
+              <option>Onboarding</option>
+              <option>Demandas iniciais</option>
+              <option>Ciclo mensal</option>
+              <option>Projeto pontual</option>
+              <option>Ajuste</option>
+            </select>
+          </label>
+          <label>
             Etapa
             <select id="demandStage">
               <option>Ideia</option>
@@ -190,6 +209,17 @@
         <label>
           Descricao
           <textarea id="demandDescription" rows="4" maxlength="500"></textarea>
+        </label>
+        <div class="template-actions">
+          <span>Checklist rapido</span>
+          <button class="ghost-button" data-checklist-template="onboarding" type="button">Onboarding</button>
+          <button class="ghost-button" data-checklist-template="initial" type="button">Iniciais</button>
+          <button class="ghost-button" data-checklist-template="monthly" type="button">Mensais</button>
+          <button class="ghost-button" data-checklist-template="team" type="button">Equipe</button>
+        </div>
+        <label>
+          Checklist da demanda
+          <textarea id="demandChecklist" rows="8" placeholder="Uma etapa por linha. Use [x] para concluir uma etapa."></textarea>
         </label>
         <div class="modal-actions">
           <button class="ghost-button danger" id="deleteDemandButton" type="button">Excluir</button>
@@ -238,6 +268,38 @@
         </label>
         <div class="modal-actions">
           <button class="ghost-button danger" id="deleteProcessButton" type="button">Excluir</button>
+          <button class="primary-button" value="default" type="submit">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="roleDialog">
+      <form method="dialog" class="modal-form wide" id="roleForm">
+        <div class="modal-header">
+          <h2 id="roleDialogTitle">Editar funcao</h2>
+          <button class="icon-button" data-close-dialog="roleDialog" title="Fechar" type="button">×</button>
+        </div>
+        <input id="rolePersonId" type="hidden" />
+        <div class="field-grid">
+          <label>
+            Pessoa
+            <select id="rolePersonSelect"></select>
+          </label>
+          <label>
+            Titulo da funcao
+            <input id="roleTitle" required maxlength="90" />
+          </label>
+        </div>
+        <label>
+          Objetivo da funcao
+          <textarea id="roleObjective" rows="4" required maxlength="700"></textarea>
+        </label>
+        <label>
+          Responsabilidades
+          <textarea id="roleResponsibilities" rows="8" placeholder="Uma responsabilidade por linha"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button class="ghost-button" id="editRolePersonButton" type="button">Editar pessoa</button>
           <button class="primary-button" value="default" type="submit">Salvar</button>
         </div>
       </form>
