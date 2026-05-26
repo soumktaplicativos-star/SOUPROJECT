@@ -25,6 +25,24 @@
           <button class="tab-button" data-view="roles" type="button">Funcoes</button>
         </nav>
 
+        <section class="panel access-panel">
+          <div class="panel-header">
+            <h2>Acesso</h2>
+          </div>
+          <label>
+            Perfil
+            <select id="accessRole">
+              <option value="admin">Direcao</option>
+              <option value="collaborator">Colaborador</option>
+              <option value="client">Cliente</option>
+            </select>
+          </label>
+          <label id="accessProfileLabel" hidden>
+            Visualizar como
+            <select id="accessProfile"></select>
+          </label>
+        </section>
+
         <section class="panel">
           <div class="panel-header">
             <h2>Colaboradores</h2>

@@ -1,6 +1,7 @@
 const statuses = ["Backlog", "Em andamento", "Aguardando", "Concluido"];
 const storageKey = "sou-demandas-v1";
 const calendarSettingsKey = "sou-calendar-settings-v1";
+const accessSettingsKey = "sou-access-settings-v1";
 
 const peopleSeed = [
   { id: "isabela", name: "Isabela", role: "Direcao estrategica e gestao", email: "", color: "#1864ab" },
@@ -829,6 +830,7 @@ const seedData = {
 
 let state = loadState();
 let calendarSettings = loadCalendarSettings();
+let currentAccess = loadAccessSettings();
 let selectedPersonId = "todos";
 let selectedView = "dashboard";
 let draggedDemandId = "";
@@ -847,6 +849,9 @@ const elements = {
   statusFilter: document.querySelector("#statusFilter"),
   searchInput: document.querySelector("#searchInput"),
   globalSearchMirror: document.querySelector("#globalSearchMirror"),
+  accessRole: document.querySelector("#accessRole"),
+  accessProfile: document.querySelector("#accessProfile"),
+  accessProfileLabel: document.querySelector("#accessProfileLabel"),
   viewTabs: document.querySelectorAll("[data-view]"),
   generateCycleButton: document.querySelector("#generateCycleButton"),
   addClientButton: document.querySelector("#addClientButton"),
@@ -989,6 +994,22 @@ function saveCalendarSettings() {
   localStorage.setItem(calendarSettingsKey, JSON.stringify(calendarSettings));
 }
 
+function loadAccessSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(accessSettingsKey) || "{}");
+    return {
+      role: ["admin", "collaborator", "client"].includes(saved.role) ? saved.role : "admin",
+      profileId: saved.profileId || "",
+    };
+  } catch {
+    return { role: "admin", profileId: "" };
+  }
+}
+
+function saveAccessSettings() {
+  localStorage.setItem(accessSettingsKey, JSON.stringify(currentAccess));
+}
+
 function normalizePerson(person) {
   return {
     ...person,
@@ -1067,6 +1088,47 @@ function findClientIdByName(name = "") {
   return state?.clients?.find((client) => client.name.toLowerCase() === String(name).toLowerCase())?.id || "";
 }
 
+function isAdminAccess() {
+  return currentAccess.role === "admin";
+}
+
+function isCollaboratorAccess() {
+  return currentAccess.role === "collaborator";
+}
+
+function isClientAccess() {
+  return currentAccess.role === "client";
+}
+
+function getAccessClientIds() {
+  if (!isClientAccess()) return state.clients.map((client) => client.id);
+  return currentAccess.profileId ? [currentAccess.profileId] : [];
+}
+
+function demandAllowedByAccess(demand) {
+  if (isClientAccess()) return getAccessClientIds().includes(demand.clientId);
+  if (isCollaboratorAccess()) return demand.ownerId === currentAccess.profileId;
+  return true;
+}
+
+function clientAllowedByAccess(client) {
+  if (isClientAccess()) return client.id === currentAccess.profileId;
+  if (isCollaboratorAccess()) return client.ownerId === currentAccess.profileId || client.memberIds?.includes(currentAccess.profileId);
+  return true;
+}
+
+function processAllowedByAccess(process) {
+  if (isClientAccess()) return false;
+  if (isCollaboratorAccess()) return process.ownerId === currentAccess.profileId;
+  return true;
+}
+
+function roleAllowedByAccess(role) {
+  if (isClientAccess()) return false;
+  if (isCollaboratorAccess()) return role.personId === currentAccess.profileId;
+  return true;
+}
+
 function getVisibleDemands() {
   const status = elements.statusFilter.value;
   const search = elements.searchInput.value.trim().toLowerCase();
@@ -1074,7 +1136,7 @@ function getVisibleDemands() {
   return state.demands.filter((demand) => {
     const owner = getOwner(demand.ownerId);
     const client = getClient(demand.clientId);
-    const personMatch = selectedPersonId === "todos" || demand.ownerId === selectedPersonId;
+    const personMatch = isClientAccess() || isCollaboratorAccess() || selectedPersonId === "todos" || demand.ownerId === selectedPersonId;
     const statusMatch = status === "todos" || demand.status === status;
     const searchText = [
       demand.title,
@@ -1089,7 +1151,7 @@ function getVisibleDemands() {
       .join(" ")
       .toLowerCase();
 
-    return personMatch && statusMatch && searchText.includes(search);
+    return demandAllowedByAccess(demand) && personMatch && statusMatch && searchText.includes(search);
   });
 }
 
@@ -1098,7 +1160,7 @@ function getVisibleProcesses() {
 
   return state.processes.filter((process) => {
     const owner = getOwner(process.ownerId);
-    const personMatch = selectedPersonId === "todos" || process.ownerId === selectedPersonId;
+    const personMatch = isCollaboratorAccess() || selectedPersonId === "todos" || process.ownerId === selectedPersonId;
     const searchText = [
       process.title,
       process.area,
@@ -1110,12 +1172,14 @@ function getVisibleProcesses() {
       .join(" ")
       .toLowerCase();
 
-    return personMatch && searchText.includes(search);
+    return processAllowedByAccess(process) && personMatch && searchText.includes(search);
   });
 }
 
 function getVisibleRoles() {
-  return state.roles.filter((role) => selectedPersonId === "todos" || role.personId === selectedPersonId);
+  return state.roles.filter(
+    (role) => roleAllowedByAccess(role) && (isCollaboratorAccess() || selectedPersonId === "todos" || role.personId === selectedPersonId),
+  );
 }
 
 function getVisibleClients() {
@@ -1124,7 +1188,8 @@ function getVisibleClients() {
   return state.clients.filter((client) => {
     const owner = getOwner(client.ownerId);
     const members = getClientMembers(client);
-    const personMatch = selectedPersonId === "todos" || client.ownerId === selectedPersonId;
+    const personMatch =
+      isClientAccess() || isCollaboratorAccess() || selectedPersonId === "todos" || client.ownerId === selectedPersonId;
     const searchText = [
       client.name,
       client.status,
@@ -1137,11 +1202,13 @@ function getVisibleClients() {
       .join(" ")
       .toLowerCase();
 
-    return (personMatch || members.some((person) => person.id === selectedPersonId)) && searchText.includes(search);
+    return clientAllowedByAccess(client) && (personMatch || members.some((person) => person.id === selectedPersonId)) && searchText.includes(search);
   });
 }
 
 function render() {
+  ensureAccessState();
+  renderAccessControls();
   renderPeople();
   renderOwnerOptions();
   renderHeader();
@@ -1150,7 +1217,45 @@ function render() {
   saveState();
 }
 
+function ensureAccessState() {
+  if (isCollaboratorAccess() && !state.people.some((person) => person.id === currentAccess.profileId)) {
+    currentAccess.profileId = state.people[0]?.id || "";
+  }
+
+  if (isClientAccess() && !state.clients.some((client) => client.id === currentAccess.profileId)) {
+    currentAccess.profileId = state.clients[0]?.id || "";
+  }
+
+  if (isCollaboratorAccess()) selectedPersonId = currentAccess.profileId || "todos";
+  if (isClientAccess()) {
+    selectedPersonId = "todos";
+    if (!["dashboard", "clients", "demands"].includes(selectedView)) selectedView = "dashboard";
+  }
+
+  saveAccessSettings();
+}
+
+function renderAccessControls() {
+  elements.accessRole.value = currentAccess.role;
+  const profiles = isClientAccess() ? state.clients : isCollaboratorAccess() ? state.people : [];
+
+  elements.accessProfileLabel.hidden = isAdminAccess();
+  elements.accessProfile.innerHTML = profiles
+    .map((profile) => `<option value="${profile.id}">${escapeHtml(profile.name)}</option>`)
+    .join("");
+  elements.accessProfile.value = currentAccess.profileId || profiles[0]?.id || "";
+}
+
 function renderPeople() {
+  if (isClientAccess()) {
+    const client = getClient(currentAccess.profileId);
+    const members = getClientMembers(client);
+    elements.personList.innerHTML = members.length
+      ? members.map((person) => personButtonTemplate(person, state.demands.filter((demand) => demand.ownerId === person.id && demand.clientId === client?.id).length)).join("")
+      : `<div class="empty-state compact">Equipe nao definida</div>`;
+    return;
+  }
+
   const allCount =
     selectedView === "processes" ? state.processes.length : selectedView === "clients" ? state.clients.length : state.demands.length;
   const rows = [
@@ -1209,17 +1314,18 @@ function renderOwnerOptions() {
 
 function renderHeader() {
   const person = selectedPersonId === "todos" ? null : getOwner(selectedPersonId);
+  const accessClient = isClientAccess() ? getClient(currentAccess.profileId) : null;
   const viewLabels = {
-    dashboard: person ? "Resumo do colaborador" : "Visao geral da operacao",
-    clients: person ? "Clientes do colaborador" : "Carteira de clientes",
-    demands: person ? "Demandas do colaborador" : "Todas as demandas",
+    dashboard: accessClient ? "Portal do cliente" : person ? "Resumo do colaborador" : "Visao geral da operacao",
+    clients: accessClient ? "Projeto do cliente" : person ? "Clientes do colaborador" : "Carteira de clientes",
+    demands: accessClient ? "Demandas do projeto" : person ? "Demandas do colaborador" : "Todas as demandas",
     processes: person ? "Processos do colaborador" : "Processos da agencia",
     roles: person ? "Funcao do colaborador" : "Funcoes da equipe",
   };
   const viewTitles = {
-    dashboard: person ? person.name : "Painel executivo",
-    clients: person ? person.name : "Clientes",
-    demands: person ? person.name : "Painel da equipe",
+    dashboard: accessClient ? accessClient.name : person ? person.name : "Painel executivo",
+    clients: accessClient ? accessClient.name : person ? person.name : "Clientes",
+    demands: accessClient ? accessClient.name : person ? person.name : "Painel da equipe",
     processes: person ? person.name : "Processos internos",
     roles: person ? person.name : "Responsabilidades",
   };
@@ -1237,8 +1343,19 @@ function renderHeader() {
   elements.addClientButton.hidden = selectedView !== "clients";
   elements.addDemandButton.hidden = selectedView !== "demands";
   elements.addProcessButton.hidden = selectedView !== "processes";
+  elements.generateCycleButton.hidden = !isAdminAccess();
+  elements.addClientButton.hidden = elements.addClientButton.hidden || !isAdminAccess();
+  elements.addDemandButton.hidden = elements.addDemandButton.hidden || isClientAccess();
+  elements.addProcessButton.hidden = elements.addProcessButton.hidden || !isAdminAccess();
+  elements.addPersonButton.hidden = !isAdminAccess();
+  elements.calendarSettingsButton.hidden = !isAdminAccess();
+  elements.syncCalendarButton.hidden = !isAdminAccess();
+  elements.exportCalendarButton.hidden = isClientAccess();
+  elements.exportButton.hidden = isClientAccess();
+  elements.importFile.previousElementSibling.hidden = !isAdminAccess();
 
   elements.viewTabs.forEach((tab) => {
+    tab.hidden = isClientAccess() && ["processes", "roles"].includes(tab.dataset.view);
     tab.classList.toggle("active", tab.dataset.view === selectedView);
   });
 }
@@ -1479,7 +1596,8 @@ function renderBoard() {
   elements.board.innerHTML = statuses
     .map((status) => {
       const demands = visible.filter((demand) => demand.status === status);
-      const cards = demands.length ? demands.map(demandCardTemplate).join("") : `<div class="empty-state">Solte uma tarefa aqui</div>`;
+      const emptyText = isClientAccess() ? "Sem tarefas aqui" : "Solte uma tarefa aqui";
+      const cards = demands.length ? demands.map(demandCardTemplate).join("") : `<div class="empty-state">${emptyText}</div>`;
 
       return `
         <section class="column" data-status="${status}">
@@ -1498,15 +1616,19 @@ function renderBoard() {
       if (draggedDemandId) return;
       openDemandDialog(card.dataset.id);
     });
-    card.addEventListener("dragstart", handleCardDragStart);
-    card.addEventListener("dragend", handleCardDragEnd);
+    if (!isClientAccess()) {
+      card.addEventListener("dragstart", handleCardDragStart);
+      card.addEventListener("dragend", handleCardDragEnd);
+    }
   });
 
-  elements.board.querySelectorAll(".column").forEach((column) => {
-    column.addEventListener("dragover", handleColumnDragOver);
-    column.addEventListener("dragleave", handleColumnDragLeave);
-    column.addEventListener("drop", handleColumnDrop);
-  });
+  if (!isClientAccess()) {
+    elements.board.querySelectorAll(".column").forEach((column) => {
+      column.addEventListener("dragover", handleColumnDragOver);
+      column.addEventListener("dragleave", handleColumnDragLeave);
+      column.addEventListener("drop", handleColumnDrop);
+    });
+  }
 }
 
 function demandCardTemplate(demand) {
@@ -1532,7 +1654,7 @@ function demandCardTemplate(demand) {
       : "Sem agenda";
 
   return `
-    <button class="demand-card" type="button" draggable="true" data-id="${demand.id}">
+    <button class="demand-card" type="button" draggable="${isClientAccess() ? "false" : "true"}" data-id="${demand.id}">
       <span class="card-cover ${projectPriorityClass}"></span>
       <h3 class="card-title">${escapeHtml(demand.title)}</h3>
       <div class="card-meta">
@@ -1708,6 +1830,7 @@ function openDemandDialog(demandId = "", presetClientId = "") {
   elements.demandChecklist.value = checklistToText(demand?.checklist || []);
   elements.demandDialogTitle.textContent = demand ? "Editar demanda" : "Nova demanda";
   elements.deleteDemandButton.hidden = !demand;
+  setDemandDialogAccess();
   elements.demandDialog.showModal();
 }
 
@@ -1726,7 +1849,29 @@ function openClientDialog(clientId = "") {
   elements.clientDialogTitle.textContent = client ? "Editar cliente" : "Novo cliente";
   elements.deleteClientButton.hidden = !client;
   elements.addClientDemandButton.disabled = !client;
+  setClientDialogAccess(Boolean(client));
   elements.clientDialog.showModal();
+}
+
+function setDemandDialogAccess() {
+  const readonly = isClientAccess();
+  setFormReadonly(elements.demandForm, readonly);
+  elements.deleteDemandButton.hidden = readonly || !elements.demandId.value;
+  elements.demandForm.querySelector(".modal-actions .primary-button").hidden = readonly;
+}
+
+function setClientDialogAccess(hasClient) {
+  const readonly = !isAdminAccess();
+  setFormReadonly(elements.clientForm, readonly);
+  elements.deleteClientButton.hidden = readonly || !hasClient;
+  elements.addClientDemandButton.hidden = isClientAccess() || !hasClient;
+  elements.clientForm.querySelector(".modal-actions .primary-button").hidden = readonly;
+}
+
+function setFormReadonly(form, readonly) {
+  form.querySelectorAll("input, textarea, select").forEach((field) => {
+    field.disabled = readonly;
+  });
 }
 
 function renderClientProjectPeople(client) {
@@ -1846,6 +1991,7 @@ function openProcessDialog(processId = "") {
 
 function savePerson(event) {
   event.preventDefault();
+  if (!isAdminAccess()) return;
   const person = {
     id: elements.personId.value || crypto.randomUUID(),
     name: elements.personName.value.trim(),
@@ -1869,6 +2015,7 @@ function savePerson(event) {
 }
 
 function deletePerson() {
+  if (!isAdminAccess()) return;
   const personId = elements.personId.value;
   if (!personId) return;
 
@@ -1887,6 +2034,7 @@ function deletePerson() {
 
 function saveDemand(event) {
   event.preventDefault();
+  if (isClientAccess()) return;
   const ownerId = elements.demandOwner.value;
   const client = getClient(elements.demandClient.value);
   const demand = {
@@ -1923,6 +2071,7 @@ function saveDemand(event) {
 
 function saveClient(event) {
   event.preventDefault();
+  if (!isAdminAccess()) return;
   const selectedMemberIds = [...elements.clientProjectPeople.querySelectorAll("input:checked")].map((input) => input.value);
   const ownerId = elements.clientOwner.value;
   const client = {
@@ -1961,6 +2110,7 @@ function openDemandFromClient() {
 }
 
 function deleteClient() {
+  if (!isAdminAccess()) return;
   const clientId = elements.clientId.value;
   const hasDemands = state.demands.some((demand) => demand.clientId === clientId);
   if (hasDemands && !confirm("Este cliente tem demandas. Excluir tambem essas demandas?")) return;
@@ -2037,6 +2187,7 @@ function defaultCycleTemplate(cycleType, personId) {
 
 function saveRole(event) {
   event.preventDefault();
+  if (!isAdminAccess()) return;
   const originalPersonId = elements.rolePersonId.value;
   const personId = elements.rolePersonSelect.value;
   const role = {
@@ -2062,6 +2213,7 @@ function saveRole(event) {
 }
 
 function deleteDemand() {
+  if (isClientAccess()) return;
   const demandId = elements.demandId.value;
   state.demands = state.demands.filter((demand) => demand.id !== demandId);
   elements.demandDialog.close();
@@ -2085,6 +2237,7 @@ function applyChecklistTemplate(templateKey) {
 
 function saveProcess(event) {
   event.preventDefault();
+  if (!isAdminAccess()) return;
   const process = {
     id: elements.processId.value || crypto.randomUUID(),
     title: elements.processTitle.value.trim(),
@@ -2109,6 +2262,7 @@ function saveProcess(event) {
 }
 
 function deleteProcess() {
+  if (!isAdminAccess()) return;
   const processId = elements.processId.value;
   state.processes = state.processes.filter((process) => process.id !== processId);
   elements.processDialog.close();
@@ -2426,6 +2580,21 @@ elements.testCalendarSyncButton.addEventListener("click", () => {
   };
   saveCalendarSettings();
   syncCalendar();
+});
+elements.accessRole.addEventListener("change", () => {
+  currentAccess = {
+    role: elements.accessRole.value,
+    profileId: "",
+  };
+  selectedPersonId = "todos";
+  selectedView = "dashboard";
+  render();
+});
+elements.accessProfile.addEventListener("change", () => {
+  currentAccess.profileId = elements.accessProfile.value;
+  selectedPersonId = isCollaboratorAccess() ? currentAccess.profileId : "todos";
+  selectedView = "dashboard";
+  render();
 });
 elements.addClientButton.addEventListener("click", () => openClientDialog());
 elements.clientForm.addEventListener("submit", saveClient);
