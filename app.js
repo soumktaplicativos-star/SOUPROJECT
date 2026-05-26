@@ -1279,9 +1279,66 @@ function createLocalSessionFromProfile(profile) {
   return null;
 }
 
+async function restoreSupabaseSession() {
+  if (!window.SOU_SUPABASE_AUTH?.getCurrentSession || !window.hasSouSupabaseConfig?.()) return;
+
+  const { session, error: sessionError } = await window.SOU_SUPABASE_AUTH.getCurrentSession();
+
+  if (sessionError) {
+    console.log("[SOU Supabase Auth] erro ao validar sessao ativa", sessionError);
+    return;
+  }
+
+  if (!session?.user) return;
+
+  const { profile, error: profileError } = await window.SOU_SUPABASE_AUTH.getProfileForCurrentUser();
+
+  if (profileError || !profile) {
+    console.log("[SOU Supabase Auth] sessao ativa sem profile carregado", {
+      id: session.user.id,
+      email: session.user.email,
+      role: null,
+    });
+    return;
+  }
+
+  const localSession = createLocalSessionFromProfile(profile);
+
+  if (!localSession) {
+    console.log("[SOU Supabase Auth] profile autenticado sem vinculo local nesta etapa", {
+      id: session.user.id,
+      email: session.user.email,
+      role: profile.role,
+    });
+    return;
+  }
+
+  console.log("[SOU Supabase Auth] sessao Supabase restaurada", {
+    id: session.user.id,
+    email: session.user.email,
+    role: profile.role,
+  });
+
+  currentSession = localSession;
+  currentAccess = {
+    role: localSession.role,
+    profileId: localSession.profileId,
+  };
+  selectedPersonId = localSession.role === "collaborator" ? localSession.profileId : "todos";
+  selectedView = "dashboard";
+  saveSessionSettings();
+  saveAccessSettings();
+  render();
+}
+
 function handleLogout() {
   currentSession = { authenticated: false };
   clearSessionSettings();
+  if (window.SOU_SUPABASE_AUTH?.logout && window.hasSouSupabaseConfig?.()) {
+    window.SOU_SUPABASE_AUTH.logout().catch((error) => {
+      console.log("[SOU Supabase Auth] erro ao encerrar sessao Supabase", error);
+    });
+  }
   render();
 }
 
@@ -2836,3 +2893,4 @@ document.querySelectorAll("[data-close-dialog]").forEach((button) => {
 });
 
 render();
+restoreSupabaseSession();
