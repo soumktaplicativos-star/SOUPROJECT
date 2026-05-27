@@ -10,9 +10,11 @@ O SOU Ops tem como objetivo organizar a operacao de uma agencia de marketing.
 
 O sistema deve permitir:
 
-- Cadastrar clientes.
-- Controlar clientes ativos, inativos, em onboarding, pausados ou encerrados.
-- Organizar demandas por cliente, colaborador, status, etapa e prioridade.
+- Cadastrar contratantes comerciais/juridicos como `clients`.
+- Cadastrar marcas operacionais como `brands`.
+- Controlar marcas ativas, inativas, em onboarding, pausadas ou encerradas.
+- Organizar demandas por marca, colaborador, status, etapa e prioridade.
+- Separar contratos da operacao diaria.
 - Gerar demandas com base nos ciclos da agencia.
 - Controlar checklists de onboarding, demandas iniciais e ciclos mensais.
 - Acompanhar tempo previsto, tempo gasto, prazo e entrega real.
@@ -20,6 +22,88 @@ O sistema deve permitir:
 - Dar visao geral para direcao.
 - Dar visao de trabalho para colaboradores.
 - Dar portal limitado para clientes.
+
+## Arquitetura estrutural aprovada
+
+A plataforma sera primeiro um sistema interno da SOU, nao um SaaS externo.
+
+Hierarquia definitiva:
+
+```text
+CLIENT
+  ├── CONTRACTS
+  └── BRANDS
+       └── PROJECTS
+            └── DEMANDS
+                 └── APPROVALS
+```
+
+Decisoes aprovadas:
+
+- `clients` representa o contratante, comercial e juridico.
+- `brands` representa a operacao real da marca.
+- `demands` deve girar em torno de `brand_id`.
+- O centro operacional da plataforma sera `demands` + `brands`.
+- `contracts` sera separado da operacao.
+- `approvals` sera separado das demandas.
+- `projects` sera opcional inicialmente.
+- Cliente externo futuramente acessara por `brand`.
+- Permuta/troca de servico sera tipo de contrato.
+
+## Diferencas obrigatorias
+
+### Client e brand
+
+`client` e o contratante/comercial/juridico. Pode agrupar uma ou mais marcas.
+
+`brand` e a operacao real. Deve ter demandas, calendario, equipe, aprovacoes e relatorios proprios.
+
+Exemplos:
+
+- Hora Certa e Moderny podem estar no mesmo contrato, mas devem operar como marcas separadas.
+- Conceittus e Ativa BPO podem estar no mesmo contrato ou contratante, mas devem ter demandas, calendario e relatorios separados.
+
+### Contrato e operacao
+
+Contrato define acordo, escopo, financeiro, juridico, vigencia e tipo de pagamento.
+
+Operacao define o trabalho diario executado pela equipe dentro de cada marca.
+
+Um contrato pode cobrir varias marcas. Uma marca pode ter demandas em ciclos, campanhas ou projetos opcionais.
+
+### Servico contratado e demanda operacional
+
+Servico contratado e o item vendido no contrato.
+
+Demanda operacional e a tarefa executavel que aparece no quadro, tem responsavel, prazo, etapa, tempo previsto e aprovacao.
+
+Servicos devem orientar a criacao de demandas, mas nao devem substituir demandas.
+
+## Pipeline operacional recomendado
+
+Pipeline base das demandas:
+
+```text
+IDEIA
+→ BRIEFING
+→ ROTEIRO
+→ CAPTACAO
+→ EDICAO
+→ REVISAO
+→ APROVACAO
+→ AGENDAMENTO
+→ PUBLICADO
+→ RELATORIO
+```
+
+Regras do pipeline:
+
+- A demanda e o centro operacional.
+- A marca e o centro de organizacao da operacao.
+- Nem toda demanda precisa passar por todas as etapas.
+- `stage` deve representar a etapa operacional.
+- `status` deve representar o estado de andamento, como backlog, em andamento, aguardando ou concluido.
+- Aprovacoes formais devem ser registradas em `approvals`.
 
 ## Tipos de usuario
 
@@ -29,13 +113,15 @@ Perfil da direcao da agencia.
 
 Pode:
 
-- Ver todos os clientes.
+- Ver todos os contratantes, marcas, contratos, projetos, demandas e aprovacoes.
 - Ver todas as demandas.
-- Criar, editar e excluir clientes.
+- Criar, editar e excluir contratantes e marcas.
+- Criar, editar e excluir contratos.
 - Criar, editar e excluir demandas.
 - Criar, editar e excluir colaboradores.
-- Gerenciar pessoas no projeto.
+- Gerenciar pessoas por marca/projeto.
 - Ver status financeiro e juridico.
+- Ver contratos de permuta.
 - Ver observacoes internas.
 - Gerar ciclos de demandas.
 - Exportar e importar dados enquanto a versao local existir.
@@ -50,7 +136,7 @@ Perfil de uma pessoa da equipe.
 Pode:
 
 - Ver demandas atribuidas a ela.
-- Ver clientes em que participa do projeto.
+- Ver marcas em que participa da operacao.
 - Atualizar demandas permitidas.
 - Consultar etapas, prazos, checklists e responsabilidades.
 
@@ -58,10 +144,11 @@ Nao deve poder:
 
 - Ver dados financeiros sensiveis, salvo autorizacao futura.
 - Ver dados juridicos sensiveis, salvo autorizacao futura.
-- Excluir clientes.
+- Ver contratos de permuta, salvo autorizacao futura.
+- Excluir contratantes, marcas ou contratos.
 - Excluir colaboradores.
 - Alterar permissoes de acesso.
-- Ver dados de clientes fora da sua participacao.
+- Ver marcas fora da sua participacao.
 
 ### Cliente
 
@@ -69,17 +156,19 @@ Perfil externo do cliente.
 
 Pode:
 
-- Ver somente o proprio projeto.
+- Ver somente as marcas liberadas para o seu acesso.
 - Ver demandas marcadas como visiveis ao cliente.
-- Ver status, etapa, prazo e entregas do proprio projeto.
+- Ver status, etapa, prazo e entregas da propria marca/projeto.
 - Ver anexos e comentarios liberados para cliente.
 
 Nao deve poder:
 
 - Ver outros clientes.
+- Ver outras marcas do mesmo contratante sem permissao explicita.
 - Ver equipe completa se isso nao for liberado.
 - Ver financeiro interno.
 - Ver juridico interno.
+- Ver contrato completo ou dados de permuta.
 - Ver observacoes internas.
 - Ver processos internos da agencia.
 - Ver tempo interno de producao, salvo decisao futura.
@@ -99,7 +188,23 @@ Quando Supabase for implementado, usar:
 - Row Level Security para proteger dados.
 - Policies por tipo de usuario.
 - Separacao entre campos internos e campos visiveis ao cliente.
+- Permissoes por `brand`, nao apenas por `client`.
 - Auditoria para acoes sensiveis.
+
+## Riscos da estrutura antiga baseada apenas em clients
+
+Nao continuar modelando a operacao apenas em `clients`.
+
+Riscos:
+
+- Misturar contratante, marca, contrato e operacao.
+- Duplicar clientes para simular marcas diferentes.
+- Misturar demandas, calendario e relatorios de marcas distintas.
+- Expor marcas indevidas para cliente externo no futuro.
+- Dificultar contratos com mais de uma marca.
+- Dificultar contratos de permuta/troca de servico.
+- Enfraquecer relatorios por marca.
+- Gerar retrabalho ao migrar demandas para Supabase.
 
 ## Primeira fase do Supabase
 
@@ -107,12 +212,16 @@ A primeira implementacao do Supabase deve comecar somente pelas tabelas essencia
 
 - `profiles`
 - `clients`
-- `client_members`
+- `brands`
+- `brand_members`
+- `contracts`
 - `demands`
 - `demand_checklist_items`
 
 As demais tabelas devem ficar para etapas futuras, incluindo:
 
+- `projects`
+- `approvals`
 - `comments`
 - `attachments`
 - `audit_logs`
@@ -121,21 +230,25 @@ As demais tabelas devem ficar para etapas futuras, incluindo:
 - `processes`
 - `roles`
 
+Observacao: a migration antiga que usa apenas `clients` e `client_members` deve ser revisada antes de novas execucoes estruturais. O modelo definitivo deve usar `brands` como eixo operacional.
+
 ## Ordem segura de implementacao
 
 1. Manter a versao atual estavel.
 2. Documentar arquitetura, regras e dados antes de refatorar.
-3. Definir quais dados sao internos e quais podem aparecer para cliente.
+3. Consolidar `clients` como contratante e `brands` como operacao.
 4. Criar projeto Supabase apenas apos aprovacao.
-5. Criar tabelas principais apenas apos aprovacao.
-6. Configurar Supabase Auth.
-7. Configurar RLS e policies antes de migrar dados sensiveis.
-8. Migrar `people`, `clients` e `demands`.
-9. Validar permissoes de admin, colaborador e cliente.
-10. Migrar processos, funcoes, checklists, comentarios e anexos.
-11. Substituir `localStorage` somente quando banco e autenticacao estiverem validados.
-12. Revisar integracao com Google Agenda.
-13. Remover login local apenas depois que Supabase Auth estiver funcionando.
+5. Criar migrations apenas apos aprovacao explicita.
+6. Criar primeiro `clients`, `brands`, `contracts`, `brand_members`, `demands` e `demand_checklist_items`.
+7. Configurar Supabase Auth.
+8. Configurar RLS e policies por `brand`.
+9. Migrar primeiro contratantes e marcas.
+10. Migrar demandas para `brand_id`.
+11. Validar permissoes de admin, colaborador e cliente externo.
+12. Migrar aprovacoes, projetos, servicos contratados, comentarios e anexos.
+13. Substituir `localStorage` somente quando banco e autenticacao estiverem validados.
+14. Revisar integracao com Google Agenda por marca/demanda.
+15. Remover login local apenas depois que Supabase Auth estiver funcionando.
 
 ## O que o Codex nao deve fazer sem autorizacao
 
@@ -145,6 +258,7 @@ O Codex nao deve:
 - Refatorar `app.js` sem autorizacao explicita.
 - Criar projeto Supabase sem autorizacao.
 - Criar tabelas no Supabase sem autorizacao.
+- Criar migration estrutural sem considerar `brands`, `contracts` e `demands.brand_id`.
 - Substituir `localStorage` sem autorizacao.
 - Alterar login sem autorizacao.
 - Remover funcionalidades existentes sem autorizacao.
