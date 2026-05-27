@@ -1,5 +1,10 @@
 -- Etapa planejada: separacao entre demands, publications e calendar_events.
 -- Este arquivo e apenas planejamento e nao deve ser executado sem revisao.
+-- Depende da execucao/revisao previa de:
+-- - 001_create_supabase_core_tables.sql
+-- - 002_plan_brand_contract_architecture.sql
+-- Nao deve ser executado isoladamente, pois depende de tabelas como brands, contracts,
+-- projects, profiles, demands e da funcao public.set_updated_at().
 -- Objetivo: separar tarefa operacional (demands) de conteudo final publicado, entregue ou medido (publications).
 -- Analytics e reports devem vir depois, usando publications como base de performance.
 -- Nao apaga tabelas, nao altera dados existentes e nao integra o frontend.
@@ -78,7 +83,7 @@ create table if not exists public.publications (
 
 create table if not exists public.calendar_events (
   id uuid primary key default gen_random_uuid(),
-  brand_id uuid references public.brands(id) on delete cascade,
+  brand_id uuid not null references public.brands(id) on delete cascade,
   demand_id uuid references public.demands(id) on delete cascade,
   publication_id uuid references public.publications(id) on delete cascade,
   project_id uuid references public.projects(id) on delete set null,
@@ -163,13 +168,23 @@ $$;
 
 do $$
 begin
-  if not exists (select 1 from pg_trigger where tgname = 'set_publications_updated_at') then
+  if not exists (
+    select 1
+    from pg_trigger
+    where tgname = 'set_publications_updated_at'
+      and tgrelid = 'public.publications'::regclass
+  ) then
     create trigger set_publications_updated_at
     before update on public.publications
     for each row execute function public.set_updated_at();
   end if;
 
-  if not exists (select 1 from pg_trigger where tgname = 'set_calendar_events_updated_at') then
+  if not exists (
+    select 1
+    from pg_trigger
+    where tgname = 'set_calendar_events_updated_at'
+      and tgrelid = 'public.calendar_events'::regclass
+  ) then
     create trigger set_calendar_events_updated_at
     before update on public.calendar_events
     for each row execute function public.set_updated_at();
