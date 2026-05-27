@@ -11,13 +11,93 @@ Hoje o sistema roda localmente no navegador e salva dados em `localStorage` e `s
 Entidades logicas atuais:
 
 - `people`: colaboradores da agencia.
-- `clients`: clientes/projetos da agencia.
+- `clients`: hoje mistura contratante, marca e projeto operacional; no modelo definitivo passara a representar apenas o contratante/comercial/juridico.
 - `demands`: demandas/tarefas do Kanban.
 - `processes`: processos internos da agencia.
 - `roles`: funcoes e responsabilidades por pessoa.
 - `calendarSettings`: URL e preferencia de sincronizacao com Google Agenda.
 - `accessSettings`: ultimo perfil visual selecionado.
 - `sessionSettings`: sessao local do login atual.
+
+## Arquitetura definitiva aprovada
+
+A plataforma SOU Ops sera primeiro um sistema interno da SOU. O centro operacional sera a combinacao entre `brands` e `demands`.
+
+Hierarquia estrutural:
+
+```text
+CLIENT
+  ├── CONTRACTS
+  └── BRANDS
+       └── PROJECTS
+            └── DEMANDS
+                 └── APPROVALS
+```
+
+Decisoes aprovadas:
+
+- `clients` representa o contratante, comercial e juridico.
+- `brands` representa a operacao real da marca.
+- `contracts` representa o acordo comercial/juridico separado da operacao.
+- `demands` deve girar em torno de `brand_id`.
+- `projects` sera opcional inicialmente.
+- `approvals` sera separado das demandas.
+- Cliente externo futuramente acessara por `brand`.
+- Permuta/troca de servico sera `contract_type`, nao apenas observacao.
+
+## Diferencas conceituais obrigatorias
+
+### Client vs Brand
+
+`client` e a entidade contratante/comercial/juridica. Pode ser uma empresa, grupo, pessoa responsavel pelo contrato ou pagador.
+
+`brand` e a operacao separada que recebe demandas, calendario, entregas, aprovacoes e relatorios.
+
+Exemplos:
+
+- Um mesmo `client` pode ter as marcas Hora Certa e Moderny.
+- Um mesmo `client` pode ter Conceittus e Ativa BPO como marcas operacionais separadas.
+- Cada `brand` deve ter demandas, calendario e relatorios proprios, mesmo quando compartilha contrato.
+
+### Contrato vs Operacao
+
+`contract` define acordo, escopo, valores, permuta, datas, status financeiro e status juridico.
+
+`brand` e `demand` definem a execucao diaria do trabalho.
+
+Um contrato pode cobrir uma ou mais marcas, mas a operacao nao deve ficar presa diretamente ao contrato.
+
+### Servico contratado vs Demanda operacional
+
+Servico contratado e o que foi vendido no escopo: social media, trafego pago, captacao, relatorio, landing page, consultoria, etc.
+
+Demanda operacional e uma tarefa executavel: criar roteiro, captar conteudo, editar reels, revisar arte, agendar post, subir campanha, montar relatorio.
+
+Servicos contratados devem orientar a geracao de demandas, mas nao devem substituir o quadro operacional.
+
+## Pipeline operacional recomendado
+
+Pipeline base para demandas:
+
+```text
+IDEIA
+→ BRIEFING
+→ ROTEIRO
+→ CAPTACAO
+→ EDICAO
+→ REVISAO
+→ APROVACAO
+→ AGENDAMENTO
+→ PUBLICADO
+→ RELATORIO
+```
+
+Observacoes:
+
+- Nem toda demanda precisa passar por todas as etapas.
+- A etapa atual da demanda deve ser registrada em `stage`.
+- O status operacional da demanda pode continuar separado de etapa, por exemplo: `Backlog`, `Em andamento`, `Aguardando`, `Concluido`.
+- Aprovacoes formais devem ficar em `approvals`, nao apenas em texto dentro da demanda.
 
 ## Tabelas futuras no Supabase
 
@@ -46,41 +126,97 @@ Roles esperadas:
 
 ### clients
 
-Clientes/projetos da agencia.
+Contratantes comerciais/juridicos da agencia. Nao representam necessariamente a marca operacional.
 
 Campos principais:
 
 - `id`
 - `name`
+- `document`
+- `email`
+- `phone`
 - `status`
-- `owner_id`
-- `finance_status`
 - `notes_internal`
-- `notes_client`
-- `contract_status`
 - `created_at`
 - `updated_at`
 
-### client_members
+### brands
 
-Relacionamento entre clientes e colaboradores.
+Marcas operacionais ligadas a um contratante.
 
 Campos principais:
 
 - `id`
 - `client_id`
+- `name`
+- `status`
+- `segment`
+- `notes_internal`
+- `notes_client`
+- `created_at`
+- `updated_at`
+
+### contracts
+
+Contratos, acordos comerciais e juridicos.
+
+Campos principais:
+
+- `id`
+- `client_id`
+- `title`
+- `contract_type`
+- `status`
+- `start_date`
+- `end_date`
+- `billing_day`
+- `monthly_value`
+- `barter_description`
+- `finance_status`
+- `legal_status`
+- `notes_internal`
+- `created_at`
+- `updated_at`
+
+Valores esperados para `contract_type`:
+
+- `paid`
+- `barter`
+- `mixed`
+- `courtesy`
+
+### contract_brands
+
+Relacionamento entre contratos e marcas. Permite que um contrato cubra mais de uma marca.
+
+Campos principais:
+
+- `id`
+- `contract_id`
+- `brand_id`
+- `scope_notes`
+- `created_at`
+
+### brand_members
+
+Relacionamento entre marcas operacionais e colaboradores.
+
+Campos principais:
+
+- `id`
+- `brand_id`
 - `profile_id`
 - `member_role`
 - `created_at`
 
-### client_contacts
+### brand_contacts
 
-Usuarios externos ligados a um cliente.
+Usuarios externos ligados a uma marca.
 
 Campos principais:
 
 - `id`
-- `client_id`
+- `brand_id`
 - `profile_id`
 - `contact_role`
 - `created_at`
@@ -101,29 +237,57 @@ Campos principais:
 - `created_at`
 - `updated_at`
 
-### client_services
+### contract_services
 
-Servicos contratados por cliente.
+Servicos contratados no acordo comercial.
 
 Campos principais:
 
 - `id`
-- `client_id`
+- `contract_id`
 - `service_id`
 - `quantity`
 - `start_month`
+- `end_month`
 - `notes`
 - `created_at`
 - `updated_at`
 
-### demands
+### projects
 
-Demandas/tarefas do sistema.
+Agrupadores opcionais de demandas por campanha, ciclo, onboarding ou acao pontual.
 
 Campos principais:
 
 - `id`
-- `client_id`
+- `brand_id`
+- `contract_id`
+- `name`
+- `type`
+- `status`
+- `priority`
+- `start_date`
+- `end_date`
+- `created_at`
+- `updated_at`
+
+Valores esperados para `type`:
+
+- `onboarding`
+- `monthly_cycle`
+- `campaign`
+- `one_time`
+
+### demands
+
+Demandas/tarefas do sistema. Esta e a entidade central da operacao.
+
+Campos principais:
+
+- `id`
+- `brand_id`
+- `project_id`
+- `contract_id`
 - `owner_id`
 - `title`
 - `description`
@@ -139,6 +303,7 @@ Campos principais:
 - `estimated_hours`
 - `actual_hours`
 - `is_client_visible`
+- `approval_status`
 - `created_by`
 - `created_at`
 - `updated_at`
@@ -156,6 +321,37 @@ Campos principais:
 - `position`
 - `created_at`
 - `updated_at`
+
+### approvals
+
+Aprovacoes formais internas ou externas ligadas a uma demanda.
+
+Campos principais:
+
+- `id`
+- `demand_id`
+- `requested_by`
+- `approved_by`
+- `approval_type`
+- `status`
+- `requested_at`
+- `responded_at`
+- `notes`
+- `created_at`
+- `updated_at`
+
+Valores esperados para `approval_type`:
+
+- `internal`
+- `client`
+- `final`
+
+Valores esperados para `status`:
+
+- `pending`
+- `approved`
+- `rejected`
+- `changes_requested`
 
 ### processes
 
@@ -275,28 +471,71 @@ Campos principais:
 ## Relacionamentos principais
 
 - `profiles.auth_user_id` referencia o usuario autenticado pelo Supabase Auth.
-- `clients.owner_id` referencia `profiles.id`.
-- `client_members.client_id` referencia `clients.id`.
-- `client_members.profile_id` referencia `profiles.id`.
-- `client_contacts.client_id` referencia `clients.id`.
-- `client_contacts.profile_id` referencia `profiles.id`.
-- `client_services.client_id` referencia `clients.id`.
-- `client_services.service_id` referencia `services.id`.
-- `demands.client_id` referencia `clients.id`.
+- `brands.client_id` referencia `clients.id`.
+- `contracts.client_id` referencia `clients.id`.
+- `contract_brands.contract_id` referencia `contracts.id`.
+- `contract_brands.brand_id` referencia `brands.id`.
+- `brand_members.brand_id` referencia `brands.id`.
+- `brand_members.profile_id` referencia `profiles.id`.
+- `brand_contacts.brand_id` referencia `brands.id`.
+- `brand_contacts.profile_id` referencia `profiles.id`.
+- `contract_services.contract_id` referencia `contracts.id`.
+- `contract_services.service_id` referencia `services.id`.
+- `projects.brand_id` referencia `brands.id`.
+- `projects.contract_id` referencia `contracts.id`.
+- `demands.brand_id` referencia `brands.id`.
+- `demands.project_id` referencia `projects.id`.
+- `demands.contract_id` referencia `contracts.id`.
 - `demands.owner_id` referencia `profiles.id`.
 - `demands.created_by` referencia `profiles.id`.
 - `demand_checklist_items.demand_id` referencia `demands.id`.
+- `approvals.demand_id` referencia `demands.id`.
+- `approvals.requested_by` referencia `profiles.id`.
+- `approvals.approved_by` referencia `profiles.id`.
 - `processes.owner_id` referencia `profiles.id`.
 - `process_checklist_items.process_id` referencia `processes.id`.
 - `roles.profile_id` referencia `profiles.id`.
 - `role_responsibilities.role_id` referencia `roles.id`.
 - `comments.demand_id` referencia `demands.id`.
 - `comments.author_id` referencia `profiles.id`.
-- `attachments.client_id` referencia `clients.id`.
+- `attachments.brand_id` referencia `brands.id`.
 - `attachments.demand_id` referencia `demands.id`.
 - `attachments.uploaded_by` referencia `profiles.id`.
 - `calendar_events.demand_id` referencia `demands.id`.
 - `audit_logs.actor_id` referencia `profiles.id`.
+
+## Permissoes por nivel
+
+### Admin
+
+- Pode ver e gerenciar todos os clientes, marcas, contratos, projetos, demandas e aprovacoes.
+- Pode ver financeiro, juridico, permutas e observacoes internas.
+- Pode vincular colaboradores a marcas.
+
+### Colaborador
+
+- Deve ver marcas em que participa via `brand_members`.
+- Deve ver demandas atribuidas ou demandas de marcas em que participa.
+- Nao deve ver contratos, valores, permutas ou status juridico salvo liberacao futura.
+- Pode atualizar demandas permitidas.
+
+### Cliente externo
+
+- Futuramente deve acessar por `brand`, nao por `client`.
+- Pode ver apenas marcas vinculadas ao seu perfil.
+- Pode ver apenas demandas, comentarios, anexos e aprovacoes marcados como visiveis ao cliente.
+- Nao deve ver contrato completo, financeiro interno, juridico interno ou outras marcas do mesmo contratante sem permissao explicita.
+
+## Riscos da estrutura antiga baseada apenas em clients
+
+- Mistura contratante, marca, contrato e operacao em uma mesma entidade.
+- Impede separar Hora Certa e Moderny quando estiverem no mesmo contrato.
+- Impede separar Conceittus e Ativa BPO quando compartilharem contratante ou contrato.
+- Mistura calendario e relatorios de marcas diferentes.
+- Dificulta permissoes do cliente externo, porque o acesso por `client` pode expor mais marcas do que deveria.
+- Faz contratos de permuta virarem observacoes soltas, sem controle operacional e financeiro.
+- Obriga duplicar contratantes para simular marcas diferentes.
+- Torna a migracao de demandas mais arriscada quando o banco ja estiver populado.
 
 ## Dados internos da agencia
 
@@ -304,8 +543,9 @@ Devem ser visiveis apenas para admin e, quando adequado, colaboradores autorizad
 
 - Status financeiro.
 - Status juridico/contratual.
-- Observacoes internas do cliente.
+- Observacoes internas do contratante, contrato e marca.
 - Custos, valores, inadimplencia e negociacoes.
+- Permutas e condicoes comerciais.
 - Processos internos.
 - Funcoes e responsabilidades internas.
 - Comentarios internos.
@@ -320,7 +560,8 @@ Devem ser visiveis apenas para admin e, quando adequado, colaboradores autorizad
 Devem aparecer apenas quando marcados como visiveis ao cliente:
 
 - Nome do projeto/cliente.
-- Demandas do proprio cliente.
+- Nome da marca liberada.
+- Demandas da propria marca.
 - Status geral da demanda.
 - Etapa atual.
 - Prazo.
@@ -329,8 +570,8 @@ Devem aparecer apenas quando marcados como visiveis ao cliente:
 - Arquivos aprovados.
 - Comentarios com visibilidade `client`.
 - Anexos com visibilidade `client`.
-- Calendario de entregas do proprio cliente.
-- Observacoes externas em `notes_client`.
+- Calendario de entregas da propria marca.
+- Observacoes externas em `brands.notes_client`.
 
 ## Observacao de seguranca
 
