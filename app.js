@@ -1049,6 +1049,12 @@ function loadSessionSettings() {
       authenticated: true,
       role: saved.role || "admin",
       profileId: saved.profileId || "",
+      authProvider: saved.authProvider || "local",
+      supabaseUserId: saved.supabaseUserId || "",
+      supabaseProfileId: saved.supabaseProfileId || "",
+      localProfileId: saved.localProfileId || "",
+      email: saved.email || "",
+      name: saved.name || "",
     };
   } catch {
     return { authenticated: false };
@@ -1154,6 +1160,18 @@ function isClientAccess() {
   return currentAccess.role === "client";
 }
 
+function isSupabaseSession() {
+  return currentSession.authProvider === "supabase";
+}
+
+function isBroadSupabaseCollaboratorAccess() {
+  return isSupabaseSession() && isCollaboratorAccess() && !currentSession.localProfileId;
+}
+
+function isUnlinkedSupabaseClientAccess() {
+  return isSupabaseSession() && isClientAccess() && !currentSession.localProfileId;
+}
+
 function getAccessClientIds() {
   if (!isClientAccess()) return state.clients.map((client) => client.id);
   return currentAccess.profileId ? [currentAccess.profileId] : [];
@@ -1161,24 +1179,28 @@ function getAccessClientIds() {
 
 function demandAllowedByAccess(demand) {
   if (isClientAccess()) return getAccessClientIds().includes(demand.clientId);
+  if (isBroadSupabaseCollaboratorAccess()) return true;
   if (isCollaboratorAccess()) return demand.ownerId === currentAccess.profileId;
   return true;
 }
 
 function clientAllowedByAccess(client) {
   if (isClientAccess()) return client.id === currentAccess.profileId;
+  if (isBroadSupabaseCollaboratorAccess()) return true;
   if (isCollaboratorAccess()) return client.ownerId === currentAccess.profileId || client.memberIds?.includes(currentAccess.profileId);
   return true;
 }
 
 function processAllowedByAccess(process) {
   if (isClientAccess()) return false;
+  if (isBroadSupabaseCollaboratorAccess()) return true;
   if (isCollaboratorAccess()) return process.ownerId === currentAccess.profileId;
   return true;
 }
 
 function roleAllowedByAccess(role) {
   if (isClientAccess()) return false;
+  if (isBroadSupabaseCollaboratorAccess()) return true;
   if (isCollaboratorAccess()) return role.personId === currentAccess.profileId;
   return true;
 }
@@ -1216,6 +1238,8 @@ async function handleLogin(event) {
     authenticated: true,
     role,
     profileId,
+    authProvider: "local",
+    localProfileId: profileId,
   };
   currentAccess = {
     role,
@@ -1238,21 +1262,23 @@ async function handleSupabaseLogin(email, password) {
   const { user, profile, error } = await window.SOU_SUPABASE_AUTH.loginAndGetProfile({ email, password });
 
   if (error || !user || !profile) {
-    elements.loginError.textContent = error?.message || "Login Supabase validado, mas nenhum profile foi encontrado.";
+    elements.loginError.textContent =
+      error?.message || "Login Supabase validado, mas nenhum profile foi encontrado em public.profiles.";
     elements.loginError.hidden = false;
     return;
   }
 
-  const session = createLocalSessionFromProfile(profile);
+  const session = createSessionFromSupabaseProfile(profile, user);
 
   if (!session) {
-    elements.loginError.textContent = "Profile Supabase sem vinculo local nesta etapa da migracao.";
+    elements.loginError.textContent = "Profile Supabase com role invalida. Use admin, collaborator ou client.";
     elements.loginError.hidden = false;
     return;
   }
 
   console.log("[SOU Supabase Auth] login Supabase validado", {
-    id: user.id,
+    auth_user_id: user.id,
+    profile_id: profile.id,
     email: user.email,
     role: profile.role,
   });
@@ -1272,88 +1298,117 @@ async function handleSupabaseLogin(email, password) {
   render();
 }
 
-function createLocalSessionFromProfile(profile) {
+function findLocalPersonForProfile(profile) {
+  return state.people.find(
+    (item) =>
+      (profile.email && item.email === profile.email) ||
+      (profile.name && item.name.toLowerCase() === String(profile.name).toLowerCase()),
+  );
+}
+
+function findLocalClientForProfile(profile) {
+  return state.clients.find(
+    (item) =>
+      (profile.client_id && item.id === profile.client_id) ||
+      (profile.name && item.name.toLowerCase() === String(profile.name).toLowerCase()),
+  );
+}
+
+function createSessionFromSupabaseProfile(profile, user = {}) {
   const role = profile.role;
+  const baseSession = {
+    authenticated: true,
+    authProvider: "supabase",
+    supabaseUserId: user.id || profile.auth_user_id || "",
+    supabaseProfileId: profile.id || "",
+    email: user.email || profile.email || "",
+    name: profile.name || user.email || "",
+  };
 
   if (role === "admin") {
-    return { authenticated: true, role: "admin", profileId: "" };
+    return { ...baseSession, role: "admin", profileId: "", localProfileId: "" };
   }
 
   if (role === "collaborator") {
-    const person = state.people.find(
-      (item) => item.email === profile.email || item.name.toLowerCase() === String(profile.name || "").toLowerCase(),
-    );
-    if (!person) return null;
-    return { authenticated: true, role: "collaborator", profileId: person.id };
+    const person = findLocalPersonForProfile(profile);
+    const localProfileId = person?.id || "";
+    return {
+      ...baseSession,
+      role: "collaborator",
+      profileId: localProfileId || profile.id || "",
+      localProfileId,
+    };
   }
 
   if (role === "client") {
-    const client = state.clients.find(
-      (item) => item.id === profile.client_id || item.name.toLowerCase() === String(profile.name || "").toLowerCase(),
-    );
-    if (!client) return null;
-    return { authenticated: true, role: "client", profileId: client.id };
+    const client = findLocalClientForProfile(profile);
+    const localProfileId = client?.id || "";
+    return {
+      ...baseSession,
+      role: "client",
+      profileId: localProfileId || profile.id || "",
+      localProfileId,
+    };
   }
 
   return null;
 }
 
 async function restoreSupabaseSession() {
-  if (!window.SOU_SUPABASE_AUTH?.getCurrentSession || !window.hasSouSupabaseConfig?.()) return;
+  if (!window.SOU_SUPABASE_AUTH?.getCurrentAuthContext || !window.hasSouSupabaseConfig?.()) return;
 
-  const { session, error: sessionError } = await window.SOU_SUPABASE_AUTH.getCurrentSession();
+  const { user, profile, error } = await window.SOU_SUPABASE_AUTH.getCurrentAuthContext();
 
-  if (sessionError) {
-    console.log("[SOU Supabase Auth] erro ao validar sessao ativa", sessionError);
+  if (error) {
+    console.log("[SOU Supabase Auth] erro ao validar sessao ativa", error);
     return;
   }
 
-  if (!session?.user) return;
+  if (!user) return;
 
-  const { profile, error: profileError } = await window.SOU_SUPABASE_AUTH.getProfileForCurrentUser();
-
-  if (profileError || !profile) {
+  if (!profile) {
     console.log("[SOU Supabase Auth] sessao ativa sem profile carregado", {
-      id: session.user.id,
-      email: session.user.email,
+      id: user.id,
+      email: user.email,
       role: null,
     });
     return;
   }
 
-  const localSession = createLocalSessionFromProfile(profile);
+  const realSession = createSessionFromSupabaseProfile(profile, user);
 
-  if (!localSession) {
-    console.log("[SOU Supabase Auth] profile autenticado sem vinculo local nesta etapa", {
-      id: session.user.id,
-      email: session.user.email,
+  if (!realSession) {
+    console.log("[SOU Supabase Auth] profile autenticado com role invalida", {
+      id: user.id,
+      email: user.email,
       role: profile.role,
     });
     return;
   }
 
   console.log("[SOU Supabase Auth] sessao Supabase restaurada", {
-    id: session.user.id,
-    email: session.user.email,
+    auth_user_id: user.id,
+    profile_id: profile.id,
+    email: user.email,
     role: profile.role,
   });
 
-  currentSession = localSession;
+  currentSession = realSession;
   currentAccess = {
-    role: localSession.role,
-    profileId: localSession.profileId,
+    role: realSession.role,
+    profileId: realSession.profileId,
   };
-  selectedPersonId = localSession.role === "collaborator" ? localSession.profileId : "todos";
+  selectedPersonId = realSession.role === "collaborator" && realSession.localProfileId ? realSession.localProfileId : "todos";
   saveSessionSettings();
   saveAccessSettings();
   render();
 }
 
-function handleLogout() {
+async function handleLogout() {
   currentSession = { authenticated: false };
   clearSessionSettings();
   if (window.SOU_SUPABASE_AUTH?.logout && window.hasSouSupabaseConfig?.()) {
-    window.SOU_SUPABASE_AUTH.logout().catch((error) => {
+    await window.SOU_SUPABASE_AUTH.logout().catch((error) => {
       console.log("[SOU Supabase Auth] erro ao encerrar sessao Supabase", error);
     });
   }
@@ -1462,7 +1517,7 @@ function renderAuthShell() {
 
   currentAccess = {
     role: currentSession.role,
-    profileId: currentSession.profileId || "",
+    profileId: currentSession.localProfileId || currentSession.profileId || "",
   };
   elements.sessionLabel.textContent = getSessionLabel();
 }
@@ -1478,21 +1533,24 @@ function renderLoginProfiles() {
 }
 
 function getSessionLabel() {
+  if (isUnlinkedSupabaseClientAccess()) return `Cliente: ${currentSession.name || currentSession.email || "Projeto"}`;
   if (isClientAccess()) return `Cliente: ${getClient(currentAccess.profileId)?.name || "Projeto"}`;
+  if (isBroadSupabaseCollaboratorAccess()) return `Colaborador: ${currentSession.name || currentSession.email || "Equipe"}`;
   if (isCollaboratorAccess()) return `Colaborador: ${getOwner(currentAccess.profileId)?.name || "Equipe"}`;
   return "Direcao";
 }
 
 function ensureAccessState() {
-  if (isCollaboratorAccess() && !state.people.some((person) => person.id === currentAccess.profileId)) {
+  if (isCollaboratorAccess() && !isBroadSupabaseCollaboratorAccess() && !state.people.some((person) => person.id === currentAccess.profileId)) {
     currentAccess.profileId = state.people[0]?.id || "";
   }
 
-  if (isClientAccess() && !state.clients.some((client) => client.id === currentAccess.profileId)) {
+  if (isClientAccess() && !isUnlinkedSupabaseClientAccess() && !state.clients.some((client) => client.id === currentAccess.profileId)) {
     currentAccess.profileId = state.clients[0]?.id || "";
   }
 
-  if (isCollaboratorAccess()) selectedPersonId = currentAccess.profileId || "todos";
+  if (isBroadSupabaseCollaboratorAccess()) selectedPersonId = "todos";
+  else if (isCollaboratorAccess()) selectedPersonId = currentAccess.profileId || "todos";
   if (isClientAccess()) {
     selectedPersonId = "todos";
     if (!["dashboard", "clients", "demands"].includes(selectedView)) setSelectedView("dashboard");
@@ -1503,7 +1561,29 @@ function ensureAccessState() {
 
 function renderAccessControls() {
   elements.accessRole.value = currentAccess.role;
-  const profiles = isClientAccess() ? state.clients : isCollaboratorAccess() ? state.people : [];
+  const supabaseClientProfile =
+    isUnlinkedSupabaseClientAccess()
+      ? [
+          {
+            id: currentAccess.profileId,
+            name: currentSession.name || currentSession.email || "Cliente Supabase",
+          },
+        ]
+      : [];
+  const supabaseCollaboratorProfile =
+    isBroadSupabaseCollaboratorAccess()
+      ? [
+          {
+            id: currentAccess.profileId,
+            name: currentSession.name || currentSession.email || "Colaborador Supabase",
+          },
+        ]
+      : [];
+  const profiles = isClientAccess()
+    ? [...supabaseClientProfile, ...state.clients]
+    : isCollaboratorAccess()
+      ? [...supabaseCollaboratorProfile, ...state.people]
+      : [];
 
   elements.accessProfileLabel.hidden = isAdminAccess();
   elements.accessProfile.innerHTML = profiles

@@ -41,6 +41,20 @@
     });
   }
 
+  async function getProfileForUserId(userId) {
+    const client = getSupabaseClient();
+
+    if (!userId) return { profile: null, error: null };
+
+    const { data, error } = await client
+      .from("profiles")
+      .select("*")
+      .eq("auth_user_id", userId)
+      .maybeSingle();
+
+    return { profile: data || null, error };
+  }
+
   async function loginAndGetProfile({ email, password }) {
     const loginResult = await login({ email, password });
 
@@ -48,10 +62,12 @@
       return { user: null, profile: null, error: loginResult.error };
     }
 
-    const { profile, error: profileError } = await getProfileForCurrentUser();
+    const user = loginResult.data?.user || null;
+    const { profile, error: profileError } = await getProfileForUserId(user?.id);
 
     return {
-      user: loginResult.data?.user || null,
+      session: loginResult.data?.session || null,
+      user,
       profile,
       error: profileError,
     };
@@ -79,19 +95,35 @@
   }
 
   async function getProfileForCurrentUser() {
-    const client = getSupabaseClient();
     const { user, error: userError } = await getCurrentUser();
 
     if (userError) return { profile: null, error: userError };
     if (!user) return { profile: null, error: null };
 
-    const { data, error } = await client
-      .from("profiles")
-      .select("*")
-      .eq("auth_user_id", user.id)
-      .single();
+    return getProfileForUserId(user.id);
+  }
 
-    return { profile: data || null, error };
+  async function getCurrentAuthContext() {
+    if (!canUseSupabaseAuth()) {
+      return { session: null, user: null, profile: null, role: null, error: null };
+    }
+
+    const { session, error: sessionError } = await getCurrentSession();
+    if (sessionError) return { session: null, user: null, profile: null, role: null, error: sessionError };
+    if (!session?.user) return { session: null, user: null, profile: null, role: null, error: null };
+
+    const { user, error: userError } = await getCurrentUser();
+    if (userError) return { session, user: null, profile: null, role: null, error: userError };
+
+    const { profile, error: profileError } = await getProfileForUserId(user?.id);
+
+    return {
+      session,
+      user,
+      profile,
+      role: profile?.role || null,
+      error: profileError,
+    };
   }
 
   async function logCurrentAuthenticatedProfile() {
@@ -149,6 +181,8 @@
     logout,
     getCurrentUser,
     getCurrentSession,
+    getCurrentAuthContext,
+    getProfileForUserId,
     getProfileForCurrentUser,
     prepareProfilePayload,
     logCurrentAuthenticatedProfile,
