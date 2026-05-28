@@ -968,6 +968,7 @@ function loadState() {
     return applySeedMigrations({
       people: parsed.people.length ? parsed.people.map(normalizePerson) : peopleSeed,
       clients: Array.isArray(parsed.clients) ? parsed.clients.map(normalizeClient) : clientsSeed,
+      clientsSource: parsed.clientsSource || "local",
       deletedClientIds: Array.isArray(parsed.deletedClientIds) ? parsed.deletedClientIds : [],
       demands: parsed.demands.map(normalizeDemand),
       processes: Array.isArray(parsed.processes) ? parsed.processes : processesSeed,
@@ -979,6 +980,8 @@ function loadState() {
 }
 
 function applySeedMigrations(currentState) {
+  if (currentState.clientsSource === "supabase") return currentState;
+
   const existingClientIds = new Set(currentState.clients.map((client) => client.id));
   const deletedClientIds = new Set(currentState.deletedClientIds || []);
   const missingClients = clientsSeed
@@ -2303,6 +2306,7 @@ function mapLocalClientToSupabasePayload(client) {
   return {
     name: client.name,
     status: client.status,
+    owner_id: null,
     finance_status: client.financeStatus,
     notes_internal: client.notes,
   };
@@ -2345,30 +2349,21 @@ async function syncClientsFromSupabase() {
     if (!session) return;
 
     const remoteClients = await loadSupabaseClients();
-    if (!remoteClients.length) return;
-
-    const localBySupabaseId = new Map(state.clients.filter((client) => client.supabaseId).map((client) => [client.supabaseId, client]));
-    const localByName = new Map(state.clients.map((client) => [client.name.toLowerCase(), client]));
-    const mergedClients = [...state.clients];
-
-    remoteClients.forEach((remoteClient) => {
-      const existing = localBySupabaseId.get(remoteClient.supabaseId) || localByName.get(remoteClient.name.toLowerCase());
-      if (!existing) {
-        mergedClients.push(remoteClient);
-        return;
+    if (!remoteClients.length) {
+      if (state.clientsSource === "supabase") {
+        state.clients = [];
+        saveState();
+        render();
+      } else {
+        state.clientsSource = "local";
+        saveState();
       }
+      return;
+    }
 
-      Object.assign(existing, {
-        ...existing,
-        supabaseId: remoteClient.supabaseId,
-        name: remoteClient.name,
-        status: remoteClient.status,
-        financeStatus: remoteClient.financeStatus,
-        notes: remoteClient.notes || existing.notes,
-      });
-    });
-
-    state.clients = mergedClients.map(normalizeClient);
+    state.clients = remoteClients.map(normalizeClient);
+    state.clientsSource = "supabase";
+    state.deletedClientIds = [];
     saveState();
     render();
   } catch (error) {
@@ -2519,6 +2514,7 @@ function saveDemand(event) {
 async function saveClient(event) {
   event.preventDefault();
   if (!isAdminAccess()) return;
+  let savedToSupabase = false;
   const selectedMemberIds = [...elements.clientProjectPeople.querySelectorAll("input:checked")].map((input) => input.value);
   const ownerId = elements.clientOwner.value;
   const currentClient = state.clients.find((item) => item.id === elements.clientId.value);
@@ -2541,9 +2537,24 @@ async function saveClient(event) {
 
   try {
     const supabaseClient = await saveClientToSupabase(client);
-    if (supabaseClient?.supabaseId) client.supabaseId = supabaseClient.supabaseId;
+    if (supabaseClient?.supabaseId) {
+      client.id = supabaseClient.id;
+      client.supabaseId = supabaseClient.supabaseId;
+      client.name = supabaseClient.name;
+      client.status = supabaseClient.status;
+      client.financeStatus = supabaseClient.financeStatus;
+      client.notes = supabaseClient.notes || client.notes;
+      state.clientsSource = "supabase";
+      savedToSupabase = true;
+    }
   } catch (error) {
     console.log("[SOU Supabase Clients] cliente salvo apenas localmente", error);
+  }
+
+  if (savedToSupabase) {
+    elements.clientDialog.close();
+    await syncClientsFromSupabase();
+    return;
   }
 
   const index = state.clients.findIndex((item) => item.id === client.id);
@@ -2578,6 +2589,7 @@ async function deleteClient() {
 
   try {
     await deleteClientFromSupabase(client);
+    if (client?.supabaseId) state.clientsSource = "supabase";
   } catch (error) {
     console.log("[SOU Supabase Clients] cliente excluido apenas localmente", error);
   }
