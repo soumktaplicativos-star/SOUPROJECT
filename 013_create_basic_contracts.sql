@@ -5,7 +5,6 @@
 -- - public.clients
 -- - public.brands
 -- - public.profiles
--- - public.is_admin()
 -- - public.set_updated_at()
 --
 -- Objetivo:
@@ -18,6 +17,8 @@
 -- - PDF/geracao de contrato.
 -- - Financeiro complexo.
 -- - Demandas, publicacoes, aprovacoes e calendario.
+
+create extension if not exists pgcrypto;
 
 create table if not exists public.contracts (
   id uuid primary key default gen_random_uuid(),
@@ -113,47 +114,103 @@ create policy "contracts_select_admin_013"
 on public.contracts
 for select
 to authenticated
-using (public.is_admin());
+using (
+  exists (
+    select 1
+    from public.profiles p
+    where p.auth_user_id = auth.uid()
+      and p.role = 'admin'
+  )
+);
 
 drop policy if exists "contracts_insert_admin_013" on public.contracts;
 create policy "contracts_insert_admin_013"
 on public.contracts
 for insert
 to authenticated
-with check (public.is_admin());
+with check (
+  exists (
+    select 1
+    from public.profiles p
+    where p.auth_user_id = auth.uid()
+      and p.role = 'admin'
+  )
+);
 
 drop policy if exists "contracts_update_admin_013" on public.contracts;
 create policy "contracts_update_admin_013"
 on public.contracts
 for update
 to authenticated
-using (public.is_admin())
-with check (public.is_admin());
+using (
+  exists (
+    select 1
+    from public.profiles p
+    where p.auth_user_id = auth.uid()
+      and p.role = 'admin'
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.profiles p
+    where p.auth_user_id = auth.uid()
+      and p.role = 'admin'
+  )
+);
 
 drop policy if exists "contracts_delete_admin_013" on public.contracts;
 create policy "contracts_delete_admin_013"
 on public.contracts
 for delete
 to authenticated
-using (public.is_admin());
+using (
+  exists (
+    select 1
+    from public.profiles p
+    where p.auth_user_id = auth.uid()
+      and p.role = 'admin'
+  )
+);
 
 drop policy if exists "contract_brands_select_admin_013" on public.contract_brands;
 create policy "contract_brands_select_admin_013"
 on public.contract_brands
 for select
 to authenticated
-using (public.is_admin());
+using (
+  exists (
+    select 1
+    from public.profiles p
+    where p.auth_user_id = auth.uid()
+      and p.role = 'admin'
+  )
+);
 
 drop policy if exists "contract_brands_insert_admin_013" on public.contract_brands;
 create policy "contract_brands_insert_admin_013"
 on public.contract_brands
 for insert
 to authenticated
-with check (public.is_admin());
+with check (
+  exists (
+    select 1
+    from public.profiles p
+    where p.auth_user_id = auth.uid()
+      and p.role = 'admin'
+  )
+);
 
 drop policy if exists "contract_brands_delete_admin_013" on public.contract_brands;
 create policy "contract_brands_delete_admin_013"
 on public.contract_brands
 for delete
 to authenticated
-using (public.is_admin());
+using (
+  exists (
+    select 1
+    from public.profiles p
+    where p.auth_user_id = auth.uid()
+      and p.role = 'admin'
+  )
+);
