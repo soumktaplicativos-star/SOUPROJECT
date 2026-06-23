@@ -1291,6 +1291,26 @@ function getContractBrands(contract) {
   return (contract?.brandIds || []).map((brandId) => getBrand(brandId)).filter(Boolean);
 }
 
+function getClientContracts(clientId) {
+  return (state.contracts || []).filter((contract) => contract.clientId === clientId);
+}
+
+function getBrandContracts(brandId) {
+  return (state.contracts || []).filter((contract) => (contract.brandIds || []).includes(brandId));
+}
+
+function getContractStatusClass(status) {
+  return status === "active" ? "low" : status === "cancelled" || status === "ended" ? "high" : "medium";
+}
+
+function getActiveContracts(contracts = []) {
+  return contracts.filter((contract) => contract.status === "active");
+}
+
+function getContractsMonthlyTotal(contracts = []) {
+  return contracts.reduce((total, contract) => total + (Number(contract.monthlyValue) || 0), 0);
+}
+
 function getClientMembers(client) {
   return (client?.memberIds || [])
     .map((personId) => getOwner(personId))
@@ -2256,6 +2276,19 @@ function clientCardTemplate(client) {
   const owner = getOwner(client.ownerId);
   const members = getClientMembers(client);
   const demandCount = state.demands.filter((demand) => demand.clientId === client.id).length;
+  const contracts = getClientContracts(client.id);
+  const activeContracts = getActiveContracts(contracts);
+  const activeContract = activeContracts[0];
+  const activeMonthlyTotal = getContractsMonthlyTotal(activeContracts);
+  const contractStatusTags = contracts.length
+    ? contracts
+        .slice(0, 3)
+        .map((contract) => {
+          const label = contractStatusLabels[contract.status] || contract.status || "Sem status";
+          return `<span class="tag ${getContractStatusClass(contract.status)}">${escapeHtml(label)}</span>`;
+        })
+        .join("")
+    : `<span class="tag">Sem contratos</span>`;
   const services = (client.services || []).slice(0, 4).map((service) => `<span class="tag">${escapeHtml(service)}</span>`).join("");
   const statusClass = client.status === "Ativo" ? "low" : client.status === "Inativo" ? "high" : "medium";
   const financeClass = client.financeStatus === "Regular" ? "low" : "high";
@@ -2279,6 +2312,15 @@ function clientCardTemplate(client) {
       <h3>${escapeHtml(client.name)}</h3>
       <p>${escapeHtml(client.notes || "Sem observacoes")}</p>
       <div class="tag-row">${services}</div>
+      <div class="tag-row">
+        <span class="tag">${contracts.length} contrato${contracts.length === 1 ? "" : "s"}</span>
+        <span class="tag low">Ativos: ${activeContracts.length}</span>
+        <span class="tag">${formatCurrency(activeMonthlyTotal)}</span>
+      </div>
+      <div class="tag-row">
+        ${activeContract ? `<span class="tag low">Ativo: ${escapeHtml(activeContract.name)}</span>` : `<span class="tag">Sem contrato ativo</span>`}
+        ${contractStatusTags}
+      </div>
       <div class="client-team">
         <span>Projeto</span>
         <span class="avatar-stack">${memberAvatars || "Sem equipe"}</span>
@@ -2296,6 +2338,10 @@ function clientCardTemplate(client) {
 
 function brandCardTemplate(brand) {
   const client = getClient(brand.clientId);
+  const contracts = getBrandContracts(brand.id);
+  const primaryContract = contracts.find((contract) => contract.status === "active") || contracts[0];
+  const contractStatusLabel = contractStatusLabels[primaryContract?.status] || primaryContract?.status || "Sem contrato";
+  const contractStatusClass = primaryContract ? getContractStatusClass(primaryContract.status) : "";
   const statusLabel = brandStatusLabels[brand.status] || brand.status || "Sem status";
   const statusClass = brand.status === "active" ? "low" : brand.status === "closed" || brand.status === "inactive" ? "high" : "medium";
 
@@ -2309,6 +2355,11 @@ function brandCardTemplate(brand) {
       <p>${escapeHtml(brand.notesInternal || brand.notesClient || "Sem observacoes")}</p>
       <div class="tag-row">
         <span class="tag">Contratante: ${escapeHtml(client?.name || "Nao vinculado")}</span>
+      </div>
+      <div class="tag-row">
+        <span class="tag ${contractStatusClass}">${escapeHtml(contractStatusLabel)}</span>
+        <span class="tag">${primaryContract ? escapeHtml(primaryContract.name) : "Nenhum contrato vinculado"}</span>
+        <span class="tag">${primaryContract ? formatCurrency(primaryContract.monthlyValue) : "Sem valor"}</span>
       </div>
       <div class="card-footer">
         <span class="owner-pill">
