@@ -4,6 +4,11 @@ const calendarSettingsKey = "sou-calendar-settings-v1";
 const accessSettingsKey = "sou-access-settings-v1";
 const sessionSettingsKey = "sou-session-v1";
 const selectedViewKey = "sou-selected-view-v1";
+const phase12Debug = {
+  clients: "nao iniciado",
+  brands: "nao iniciado",
+  contracts: "nao iniciado",
+};
 
 const peopleSeed = [
   { id: "isabela", name: "Isabela", role: "Direcao estrategica e gestao", email: "", color: "#1864ab" },
@@ -147,6 +152,25 @@ const clientsSeed = [
     notes: "Pacote enxuto com planejamento, roteiro, edicao, artes, legendas, agendamento, relatorio e atendimento por WhatsApp. Vencimento dia 25.",
   },
 ];
+
+const brandsSeed = [];
+const contractsSeed = [];
+
+const brandStatusLabels = {
+  active: "Ativa",
+  inactive: "Inativa",
+  onboarding: "Onboarding",
+  paused: "Pausada",
+  closed: "Encerrada",
+};
+
+const contractStatusLabels = {
+  draft: "Rascunho",
+  active: "Ativo",
+  paused: "Pausado",
+  ended: "Encerrado",
+  cancelled: "Cancelado",
+};
 
 const processesSeed = [
   {
@@ -765,6 +789,12 @@ const seedData = {
   people: peopleSeed,
   clients: clientsSeed,
   deletedClientIds: [],
+  brands: brandsSeed,
+  brandsSource: "local",
+  deletedBrandIds: [],
+  contracts: contractsSeed,
+  contractsSource: "local",
+  deletedContractIds: [],
   demands: [
     {
       id: crypto.randomUUID(),
@@ -854,6 +884,8 @@ const elements = {
   personList: document.querySelector("#personList"),
   dashboardGrid: document.querySelector("#dashboardGrid"),
   clientGrid: document.querySelector("#clientGrid"),
+  brandGrid: document.querySelector("#brandGrid"),
+  contractGrid: document.querySelector("#contractGrid"),
   board: document.querySelector("#board"),
   processGrid: document.querySelector("#processGrid"),
   roleGrid: document.querySelector("#roleGrid"),
@@ -870,6 +902,8 @@ const elements = {
   viewTabs: document.querySelectorAll("[data-view]"),
   generateCycleButton: document.querySelector("#generateCycleButton"),
   addClientButton: document.querySelector("#addClientButton"),
+  addBrandButton: document.querySelector("#addBrandButton"),
+  addContractButton: document.querySelector("#addContractButton"),
   addDemandButton: document.querySelector("#addDemandButton"),
   addProcessButton: document.querySelector("#addProcessButton"),
   addPersonButton: document.querySelector("#addPersonButton"),
@@ -947,6 +981,34 @@ const elements = {
   clientDemandList: document.querySelector("#clientDemandList"),
   addClientDemandButton: document.querySelector("#addClientDemandButton"),
   deleteClientButton: document.querySelector("#deleteClientButton"),
+  brandDialog: document.querySelector("#brandDialog"),
+  brandForm: document.querySelector("#brandForm"),
+  brandDialogTitle: document.querySelector("#brandDialogTitle"),
+  brandId: document.querySelector("#brandId"),
+  brandName: document.querySelector("#brandName"),
+  brandClient: document.querySelector("#brandClient"),
+  brandStatus: document.querySelector("#brandStatus"),
+  brandSegment: document.querySelector("#brandSegment"),
+  brandNotesInternal: document.querySelector("#brandNotesInternal"),
+  brandNotesClient: document.querySelector("#brandNotesClient"),
+  deleteBrandButton: document.querySelector("#deleteBrandButton"),
+  contractDialog: document.querySelector("#contractDialog"),
+  contractForm: document.querySelector("#contractForm"),
+  contractDialogTitle: document.querySelector("#contractDialogTitle"),
+  contractId: document.querySelector("#contractId"),
+  contractClient: document.querySelector("#contractClient"),
+  contractName: document.querySelector("#contractName"),
+  contractStatus: document.querySelector("#contractStatus"),
+  contractMonthlyValue: document.querySelector("#contractMonthlyValue"),
+  contractStartDate: document.querySelector("#contractStartDate"),
+  contractEndDate: document.querySelector("#contractEndDate"),
+  contractBrands: document.querySelector("#contractBrands"),
+  contractServices: document.querySelector("#contractServices"),
+  contractScope: document.querySelector("#contractScope"),
+  contractPaymentTerms: document.querySelector("#contractPaymentTerms"),
+  contractNotes: document.querySelector("#contractNotes"),
+  deleteContractButton: document.querySelector("#deleteContractButton"),
+  dataSourceDebug: document.querySelector("#dataSourceDebug"),
   cycleDialog: document.querySelector("#cycleDialog"),
   cycleForm: document.querySelector("#cycleForm"),
   cycleClient: document.querySelector("#cycleClient"),
@@ -970,6 +1032,12 @@ function loadState() {
       clients: Array.isArray(parsed.clients) ? parsed.clients.map(normalizeClient) : clientsSeed,
       clientsSource: parsed.clientsSource || "local",
       deletedClientIds: Array.isArray(parsed.deletedClientIds) ? parsed.deletedClientIds : [],
+      brands: Array.isArray(parsed.brands) ? parsed.brands.map(normalizeBrand) : brandsSeed,
+      brandsSource: parsed.brandsSource || "local",
+      deletedBrandIds: Array.isArray(parsed.deletedBrandIds) ? parsed.deletedBrandIds : [],
+      contracts: Array.isArray(parsed.contracts) ? parsed.contracts.map(normalizeContract) : contractsSeed,
+      contractsSource: parsed.contractsSource || "local",
+      deletedContractIds: Array.isArray(parsed.deletedContractIds) ? parsed.deletedContractIds : [],
       demands: parsed.demands.map(normalizeDemand),
       processes: Array.isArray(parsed.processes) ? parsed.processes : processesSeed,
       roles: Array.isArray(parsed.roles) ? parsed.roles : rolesSeed,
@@ -980,18 +1048,39 @@ function loadState() {
 }
 
 function applySeedMigrations(currentState) {
-  if (currentState.clientsSource === "supabase") return currentState;
+  const nextState = { ...currentState };
 
-  const existingClientIds = new Set(currentState.clients.map((client) => client.id));
-  const deletedClientIds = new Set(currentState.deletedClientIds || []);
-  const missingClients = clientsSeed
-    .filter((client) => !existingClientIds.has(client.id) && !deletedClientIds.has(client.id))
-    .map((client) => structuredClone(client));
+  if (nextState.clientsSource !== "supabase") {
+    const existingClientIds = new Set(nextState.clients.map((client) => client.id));
+    const deletedClientIds = new Set(nextState.deletedClientIds || []);
+    const missingClients = clientsSeed
+      .filter((client) => !existingClientIds.has(client.id) && !deletedClientIds.has(client.id))
+      .map((client) => structuredClone(client));
 
-  return {
-    ...currentState,
-    clients: [...currentState.clients, ...missingClients],
-  };
+    nextState.clients = [...nextState.clients, ...missingClients];
+  }
+
+  if (nextState.brandsSource !== "supabase") {
+    const existingBrandIds = new Set((nextState.brands || []).map((brand) => brand.id));
+    const deletedBrandIds = new Set(nextState.deletedBrandIds || []);
+    const missingBrands = brandsSeed
+      .filter((brand) => !existingBrandIds.has(brand.id) && !deletedBrandIds.has(brand.id))
+      .map((brand) => structuredClone(brand));
+
+    nextState.brands = [...(nextState.brands || []), ...missingBrands];
+  }
+
+  if (nextState.contractsSource !== "supabase") {
+    const existingContractIds = new Set((nextState.contracts || []).map((contract) => contract.id));
+    const deletedContractIds = new Set(nextState.deletedContractIds || []);
+    const missingContracts = contractsSeed
+      .filter((contract) => !existingContractIds.has(contract.id) && !deletedContractIds.has(contract.id))
+      .map((contract) => structuredClone(contract));
+
+    nextState.contracts = [...(nextState.contracts || []), ...missingContracts];
+  }
+
+  return nextState;
 }
 
 function saveState() {
@@ -1032,7 +1121,7 @@ function saveAccessSettings() {
 
 function loadSelectedView() {
   const saved = localStorage.getItem(selectedViewKey);
-  return ["dashboard", "clients", "demands", "processes", "roles"].includes(saved) ? saved : "dashboard";
+  return ["dashboard", "clients", "brands", "contracts", "demands", "processes", "roles"].includes(saved) ? saved : "dashboard";
 }
 
 function saveSelectedView() {
@@ -1040,7 +1129,7 @@ function saveSelectedView() {
 }
 
 function setSelectedView(view, { persist = true } = {}) {
-  selectedView = ["dashboard", "clients", "demands", "processes", "roles"].includes(view) ? view : "dashboard";
+  selectedView = ["dashboard", "clients", "brands", "contracts", "demands", "processes", "roles"].includes(view) ? view : "dashboard";
   if (persist) saveSelectedView();
 }
 
@@ -1048,6 +1137,7 @@ function loadSessionSettings() {
   try {
     const saved = JSON.parse(sessionStorage.getItem(sessionSettingsKey) || "{}");
     if (!saved.authenticated) return { authenticated: false };
+    if (saved.authProvider === "supabase") return { authenticated: false };
     return {
       authenticated: true,
       role: saved.role || "admin",
@@ -1091,6 +1181,45 @@ function normalizeClient(client) {
     memberIds: normalizeClientMemberIds(client.memberIds, client.ownerId, services),
     services,
     notes: client.notes || "",
+  };
+}
+
+function normalizeBrand(brand) {
+  return {
+    id: brand.id || crypto.randomUUID(),
+    supabaseId: brand.supabaseId || "",
+    clientId: brand.clientId || brand.client_id || clientsSeed[0]?.id || "",
+    name: brand.name || "Marca sem nome",
+    slug: brand.slug || slugify(brand.name || ""),
+    status: brand.status || "active",
+    segment: brand.segment || "",
+    notesInternal: brand.notesInternal || brand.notes_internal || "",
+    notesClient: brand.notesClient || brand.notes_client || "",
+  };
+}
+
+function normalizeContract(contract) {
+  const services = Array.isArray(contract.services)
+    ? contract.services
+    : String(contract.services || "")
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+  return {
+    id: contract.id || crypto.randomUUID(),
+    supabaseId: contract.supabaseId || "",
+    clientId: contract.clientId || contract.client_id || "",
+    brandIds: Array.isArray(contract.brandIds) ? contract.brandIds.filter(Boolean) : [],
+    name: contract.name || "Contrato sem nome",
+    status: contract.status || "draft",
+    startDate: contract.startDate || contract.start_date || "",
+    endDate: contract.endDate || contract.end_date || "",
+    monthlyValue: contract.monthlyValue ?? contract.monthly_value ?? "",
+    paymentTerms: contract.paymentTerms || contract.payment_terms || "",
+    services,
+    scope: contract.scope || "",
+    notes: contract.notes || "",
   };
 }
 
@@ -1139,6 +1268,27 @@ function getOwner(ownerId) {
 
 function getClient(clientId) {
   return state.clients?.find((client) => client.id === clientId);
+}
+
+function getClientSupabaseId(clientId) {
+  const client = getClient(clientId);
+  return client?.supabaseId || client?.id || "";
+}
+
+function getBrand(brandId) {
+  return state.brands?.find((brand) => brand.id === brandId);
+}
+
+function getContract(contractId) {
+  return state.contracts?.find((contract) => contract.id === contractId);
+}
+
+function getClientBrands(clientId) {
+  return (state.brands || []).filter((brand) => brand.clientId === clientId);
+}
+
+function getContractBrands(contract) {
+  return (contract?.brandIds || []).map((brandId) => getBrand(brandId)).filter(Boolean);
 }
 
 function getClientMembers(client) {
@@ -1262,14 +1412,46 @@ async function handleSupabaseLogin(email, password) {
     return;
   }
 
-  const { user, profile, error } = await window.SOU_SUPABASE_AUTH.loginAndGetProfile({ email, password });
+  updatePhase12Debug("clients", "Supabase signIn: tentando");
+  updatePhase12Debug("brands", "Supabase signIn: tentando");
+  updatePhase12Debug("contracts", "Supabase signIn: tentando");
+  const { session: authSession, user, profile, error } = await window.SOU_SUPABASE_AUTH.loginAndGetProfile({ email, password });
 
-  if (error || !user || !profile) {
-    elements.loginError.textContent =
-      error?.message || "Login Supabase validado, mas nenhum profile foi encontrado em public.profiles.";
+  if (error) {
+    updatePhase12Debug("clients", `Supabase signIn erro: ${error.message || "desconhecido"}`);
+    updatePhase12Debug("brands", `Supabase signIn erro: ${error.message || "desconhecido"}`);
+    updatePhase12Debug("contracts", `Supabase signIn erro: ${error.message || "desconhecido"}`);
+    elements.loginError.textContent = error.message || "Erro no login Supabase.";
     elements.loginError.hidden = false;
     return;
   }
+
+  if (!authSession || !user?.id) {
+    updatePhase12Debug("clients", "Supabase session: nao");
+    updatePhase12Debug("brands", "Supabase session: nao");
+    updatePhase12Debug("contracts", "Supabase session: nao");
+    elements.loginError.textContent = "Login Supabase nao retornou sessao valida.";
+    elements.loginError.hidden = false;
+    return;
+  }
+
+  updatePhase12Debug("clients", `Supabase session: sim; user: ${user.id}`);
+  updatePhase12Debug("brands", `Supabase session: sim; user: ${user.id}`);
+  updatePhase12Debug("contracts", `Supabase session: sim; user: ${user.id}`);
+
+  if (!profile) {
+    updatePhase12Debug("clients", "Profile encontrado: nao");
+    updatePhase12Debug("brands", "Profile encontrado: nao");
+    updatePhase12Debug("contracts", "Profile encontrado: nao");
+    elements.loginError.textContent =
+      "Profile nao encontrado em public.profiles para este usuario Supabase.";
+    elements.loginError.hidden = false;
+    return;
+  }
+
+  updatePhase12Debug("clients", `Profile encontrado: sim; role: ${profile.role || "sem role"}`);
+  updatePhase12Debug("brands", `Profile encontrado: sim; role: ${profile.role || "sem role"}`);
+  updatePhase12Debug("contracts", `Profile encontrado: sim; role: ${profile.role || "sem role"}`);
 
   const session = createSessionFromSupabaseProfile(profile, user);
 
@@ -1299,6 +1481,9 @@ async function handleSupabaseLogin(email, password) {
   saveSessionSettings();
   saveAccessSettings();
   render();
+  await syncClientsFromSupabase();
+  await syncBrandsFromSupabase();
+  await syncContractsFromSupabase();
 }
 
 function findLocalPersonForProfile(profile) {
@@ -1358,18 +1543,47 @@ function createSessionFromSupabaseProfile(profile, user = {}) {
 }
 
 async function restoreSupabaseSession() {
-  if (!window.SOU_SUPABASE_AUTH?.getCurrentAuthContext || !window.hasSouSupabaseConfig?.()) return;
+  if (!window.SOU_SUPABASE_AUTH?.getCurrentAuthContext || !window.hasSouSupabaseConfig?.()) {
+    updatePhase12Debug("clients", "restore sem config/auth api");
+    updatePhase12Debug("brands", "restore sem config/auth api");
+    updatePhase12Debug("contracts", "restore sem config/auth api");
+    return;
+  }
 
   const { user, profile, error } = await window.SOU_SUPABASE_AUTH.getCurrentAuthContext();
 
   if (error) {
+    updatePhase12Debug("clients", `restore erro: ${error.message || "desconhecido"}`);
+    updatePhase12Debug("brands", `restore erro: ${error.message || "desconhecido"}`);
+    updatePhase12Debug("contracts", `restore erro: ${error.message || "desconhecido"}`);
     console.log("[SOU Supabase Auth] erro ao validar sessao ativa", error);
     return;
   }
 
-  if (!user) return;
+  if (!user) {
+    if (currentSession.authProvider === "supabase") {
+      currentSession = { authenticated: false };
+      currentAccess = { role: "admin", profileId: "" };
+      clearSessionSettings();
+      saveAccessSettings();
+    }
+    updatePhase12Debug("clients", "restore sem user Supabase");
+    updatePhase12Debug("brands", "restore sem user Supabase");
+    updatePhase12Debug("contracts", "restore sem user Supabase");
+    render();
+    return;
+  }
 
   if (!profile) {
+    if (currentSession.authProvider === "supabase") {
+      currentSession = { authenticated: false };
+      currentAccess = { role: "admin", profileId: "" };
+      clearSessionSettings();
+      saveAccessSettings();
+    }
+    updatePhase12Debug("clients", "restore sem profile Supabase");
+    updatePhase12Debug("brands", "restore sem profile Supabase");
+    updatePhase12Debug("contracts", "restore sem profile Supabase");
     console.log("[SOU Supabase Auth] sessao ativa sem profile carregado", {
       id: user.id,
       email: user.email,
@@ -1405,10 +1619,14 @@ async function restoreSupabaseSession() {
   saveSessionSettings();
   saveAccessSettings();
   render();
+  await syncClientsFromSupabase();
+  await syncBrandsFromSupabase();
+  await syncContractsFromSupabase();
 }
 
 async function handleLogout() {
   currentSession = { authenticated: false };
+  currentAccess = { role: "admin", profileId: "" };
   clearSessionSettings();
   if (window.SOU_SUPABASE_AUTH?.logout && window.hasSouSupabaseConfig?.()) {
     await window.SOU_SUPABASE_AUTH.logout().catch((error) => {
@@ -1495,11 +1713,55 @@ function getVisibleClients() {
   });
 }
 
+function getVisibleBrands() {
+  const search = elements.searchInput.value.trim().toLowerCase();
+
+  return (state.brands || []).filter((brand) => {
+    const client = getClient(brand.clientId);
+    const searchText = [
+      brand.name,
+      brandStatusLabels[brand.status] || brand.status,
+      brand.segment,
+      brand.notesInternal,
+      brand.notesClient,
+      client?.name,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return !isClientAccess() && searchText.includes(search);
+  });
+}
+
+function getVisibleContracts() {
+  const search = elements.searchInput.value.trim().toLowerCase();
+
+  return (state.contracts || []).filter((contract) => {
+    const client = getClient(contract.clientId);
+    const brands = getContractBrands(contract);
+    const searchText = [
+      contract.name,
+      contractStatusLabels[contract.status] || contract.status,
+      client?.name,
+      contract.scope,
+      contract.paymentTerms,
+      contract.notes,
+      ...(contract.services || []),
+      ...brands.map((brand) => brand.name),
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return !isClientAccess() && searchText.includes(search);
+  });
+}
+
 function render() {
   renderAuthShell();
   if (!currentSession.authenticated) return;
   ensureAccessState();
   renderAccessControls();
+  renderDataSourceDebug();
   renderPeople();
   renderOwnerOptions();
   renderHeader();
@@ -1523,6 +1785,27 @@ function renderAuthShell() {
     profileId: currentSession.localProfileId || currentSession.profileId || "",
   };
   elements.sessionLabel.textContent = getSessionLabel();
+}
+
+function renderDataSourceDebug() {
+  if (!elements.dataSourceDebug) return;
+  // TODO remove debug after Phase 1.2.
+  // TODO remove debug after contracts phase.
+  elements.dataSourceDebug.textContent = `Session: ${currentSession.authProvider || "local"} | Clients source: ${formatDataSource(state.clientsSource)} (${state.clients?.length || 0}) | Brands source: ${formatDataSource(state.brandsSource)} (${state.brands?.length || 0}) | Contracts source: ${formatDataSource(state.contractsSource)} (${state.contracts?.length || 0}) | Clients sync: ${phase12Debug.clients} | Brands sync: ${phase12Debug.brands} | Contracts sync: ${phase12Debug.contracts}`;
+}
+
+function updatePhase12Debug(area, message) {
+  // TODO remove debug after Phase 1.2.
+  // TODO remove debug after contracts phase.
+  phase12Debug[area] = message;
+  renderDataSourceDebug();
+}
+
+function formatDataSource(source) {
+  if (source === "supabase") return "Supabase";
+  if (source === "seed") return "seed";
+  if (source === "fallback") return "fallback";
+  return "localStorage/fallback";
 }
 
 function renderLoginProfiles() {
@@ -1606,7 +1889,15 @@ function renderPeople() {
   }
 
   const allCount =
-    selectedView === "processes" ? state.processes.length : selectedView === "clients" ? state.clients.length : state.demands.length;
+    selectedView === "processes"
+      ? state.processes.length
+      : selectedView === "clients"
+        ? state.clients.length
+          : selectedView === "brands"
+            ? (state.brands || []).length
+            : selectedView === "contracts"
+              ? (state.contracts || []).length
+          : state.demands.length;
   const rows = [
     personButtonTemplate({ id: "todos", name: "Toda a equipe", role: "Visao geral", color: "#202124" }, allCount),
     ...state.people.map((person) => {
@@ -1615,6 +1906,10 @@ function renderPeople() {
           ? state.processes.filter((process) => process.ownerId === person.id).length
           : selectedView === "clients"
             ? state.clients.filter((client) => client.ownerId === person.id || client.memberIds?.includes(person.id)).length
+          : selectedView === "brands"
+            ? getVisibleBrands().length
+          : selectedView === "contracts"
+            ? getVisibleContracts().length
           : state.demands.filter((demand) => demand.ownerId === person.id).length;
       return personButtonTemplate(person, count);
     }),
@@ -1659,6 +1954,8 @@ function renderOwnerOptions() {
   elements.clientOwner.innerHTML = options;
   elements.demandClient.innerHTML = clientOptions;
   elements.cycleClient.innerHTML = clientOptions;
+  elements.brandClient.innerHTML = clientOptions;
+  elements.contractClient.innerHTML = clientOptions;
 }
 
 function renderHeader() {
@@ -1667,6 +1964,8 @@ function renderHeader() {
   const viewLabels = {
     dashboard: accessClient ? "Portal do cliente" : person ? "Resumo do colaborador" : "Visao geral da operacao",
     clients: accessClient ? "Projeto do cliente" : person ? "Clientes do colaborador" : "Carteira de clientes",
+    brands: "Marcas operacionais",
+    contracts: "Contratos comerciais",
     demands: accessClient ? "Demandas do projeto" : person ? "Demandas do colaborador" : "Todas as demandas",
     processes: person ? "Processos do colaborador" : "Processos da agencia",
     roles: person ? "Funcao do colaborador" : "Funcoes da equipe",
@@ -1674,6 +1973,8 @@ function renderHeader() {
   const viewTitles = {
     dashboard: accessClient ? accessClient.name : person ? person.name : "Painel executivo",
     clients: accessClient ? accessClient.name : person ? person.name : "Clientes",
+    brands: "Marcas",
+    contracts: "Contratos",
     demands: accessClient ? accessClient.name : person ? person.name : "Painel da equipe",
     processes: person ? person.name : "Processos internos",
     roles: person ? person.name : "Responsabilidades",
@@ -1681,6 +1982,8 @@ function renderHeader() {
   const pageTitles = {
     dashboard: "Dashboard",
     clients: "Clientes",
+    brands: "Marcas",
+    contracts: "Contratos",
     demands: "Demandas",
     processes: "Processos",
     roles: "Funcoes",
@@ -1690,10 +1993,14 @@ function renderHeader() {
   elements.selectedPersonLabel.textContent = viewLabels[selectedView];
   elements.workspaceTitle.textContent = viewTitles[selectedView];
   elements.addClientButton.hidden = selectedView !== "clients";
+  elements.addBrandButton.hidden = selectedView !== "brands";
+  elements.addContractButton.hidden = selectedView !== "contracts";
   elements.addDemandButton.hidden = selectedView !== "demands";
   elements.addProcessButton.hidden = selectedView !== "processes";
   elements.generateCycleButton.hidden = !isAdminAccess();
   elements.addClientButton.hidden = elements.addClientButton.hidden || !isAdminAccess();
+  elements.addBrandButton.hidden = elements.addBrandButton.hidden || !isAdminAccess();
+  elements.addContractButton.hidden = elements.addContractButton.hidden || !isAdminAccess();
   elements.addDemandButton.hidden = elements.addDemandButton.hidden || isClientAccess();
   elements.addProcessButton.hidden = elements.addProcessButton.hidden || !isAdminAccess();
   elements.addPersonButton.hidden = !isAdminAccess();
@@ -1704,7 +2011,7 @@ function renderHeader() {
   elements.importFile.previousElementSibling.hidden = !isAdminAccess();
 
   elements.viewTabs.forEach((tab) => {
-    tab.hidden = isClientAccess() && ["processes", "roles"].includes(tab.dataset.view);
+    tab.hidden = isClientAccess() && ["brands", "contracts", "processes", "roles"].includes(tab.dataset.view);
     tab.classList.toggle("active", tab.dataset.view === selectedView);
   });
 }
@@ -1732,6 +2039,28 @@ function renderMetrics() {
       ["Ativos", visible.filter((client) => client.status === "Ativo").length],
       ["Inativos", visible.filter((client) => client.status !== "Ativo").length],
       ["Pendencias", visible.filter((client) => client.financeStatus !== "Regular").length],
+    ]);
+    return;
+  }
+
+  if (selectedView === "brands") {
+    const visible = getVisibleBrands();
+    renderMetricItems([
+      ["Marcas", visible.length],
+      ["Ativas", visible.filter((brand) => brand.status === "active").length],
+      ["Onboarding", visible.filter((brand) => brand.status === "onboarding").length],
+      ["Contratantes", new Set(visible.map((brand) => brand.clientId)).size],
+    ]);
+    return;
+  }
+
+  if (selectedView === "contracts") {
+    const visible = getVisibleContracts();
+    renderMetricItems([
+      ["Contratos", visible.length],
+      ["Ativos", visible.filter((contract) => contract.status === "active").length],
+      ["Rascunhos", visible.filter((contract) => contract.status === "draft").length],
+      ["Marcas vinculadas", visible.reduce((total, contract) => total + (contract.brandIds?.length || 0), 0)],
     ]);
     return;
   }
@@ -1778,12 +2107,16 @@ function renderMetricItems(metricItems) {
 function renderMainView() {
   elements.dashboardGrid.hidden = selectedView !== "dashboard";
   elements.clientGrid.hidden = selectedView !== "clients";
+  elements.brandGrid.hidden = selectedView !== "brands";
+  elements.contractGrid.hidden = selectedView !== "contracts";
   elements.board.hidden = selectedView !== "demands";
   elements.processGrid.hidden = selectedView !== "processes";
   elements.roleGrid.hidden = selectedView !== "roles";
 
   if (selectedView === "dashboard") renderDashboard();
   if (selectedView === "clients") renderClients();
+  if (selectedView === "brands") renderBrands();
+  if (selectedView === "contracts") renderContracts();
   if (selectedView === "demands") renderBoard();
   if (selectedView === "processes") renderProcesses();
   if (selectedView === "roles") renderRoles();
@@ -1897,6 +2230,28 @@ function renderClients() {
   });
 }
 
+function renderBrands() {
+  const visible = getVisibleBrands();
+  elements.brandGrid.innerHTML = visible.length
+    ? visible.map(brandCardTemplate).join("")
+    : `<div class="empty-state">Nenhuma marca encontrada</div>`;
+
+  elements.brandGrid.querySelectorAll(".client-card").forEach((card) => {
+    card.addEventListener("click", () => openBrandDialog(card.dataset.id));
+  });
+}
+
+function renderContracts() {
+  const visible = getVisibleContracts();
+  elements.contractGrid.innerHTML = visible.length
+    ? visible.map(contractCardTemplate).join("")
+    : `<div class="empty-state">Nenhum contrato encontrado</div>`;
+
+  elements.contractGrid.querySelectorAll(".client-card").forEach((card) => {
+    card.addEventListener("click", () => openContractDialog(card.dataset.id));
+  });
+}
+
 function clientCardTemplate(client) {
   const owner = getOwner(client.ownerId);
   const members = getClientMembers(client);
@@ -1934,6 +2289,64 @@ function clientCardTemplate(client) {
           ${escapeHtml(owner?.name || "Sem responsavel")}
         </span>
         <span class="tag">${demandCount} demandas</span>
+      </div>
+    </button>
+  `;
+}
+
+function brandCardTemplate(brand) {
+  const client = getClient(brand.clientId);
+  const statusLabel = brandStatusLabels[brand.status] || brand.status || "Sem status";
+  const statusClass = brand.status === "active" ? "low" : brand.status === "closed" || brand.status === "inactive" ? "high" : "medium";
+
+  return `
+    <button class="client-card" type="button" data-id="${brand.id}">
+      <div class="client-card-header">
+        <span class="tag ${statusClass}">${escapeHtml(statusLabel)}</span>
+        <span class="tag">${escapeHtml(brand.segment || "Sem segmento")}</span>
+      </div>
+      <h3>${escapeHtml(brand.name)}</h3>
+      <p>${escapeHtml(brand.notesInternal || brand.notesClient || "Sem observacoes")}</p>
+      <div class="tag-row">
+        <span class="tag">Contratante: ${escapeHtml(client?.name || "Nao vinculado")}</span>
+      </div>
+      <div class="card-footer">
+        <span class="owner-pill">
+          <span class="owner-avatar" style="background:#6961EC">${getInitials(brand.name)}</span>
+          Marca operacional
+        </span>
+        <span class="tag">${escapeHtml(brand.slug || slugify(brand.name))}</span>
+      </div>
+    </button>
+  `;
+}
+
+function contractCardTemplate(contract) {
+  const client = getClient(contract.clientId);
+  const brands = getContractBrands(contract);
+  const statusLabel = contractStatusLabels[contract.status] || contract.status || "Sem status";
+  const statusClass = contract.status === "active" ? "low" : contract.status === "cancelled" || contract.status === "ended" ? "high" : "medium";
+  const services = (contract.services || []).slice(0, 4).map((service) => `<span class="tag">${escapeHtml(service)}</span>`).join("");
+  const brandTags = brands.length
+    ? brands.slice(0, 4).map((brand) => `<span class="tag">${escapeHtml(brand.name)}</span>`).join("")
+    : `<span class="tag">Sem marcas</span>`;
+
+  return `
+    <button class="client-card" type="button" data-id="${contract.id}">
+      <div class="client-card-header">
+        <span class="tag ${statusClass}">${escapeHtml(statusLabel)}</span>
+        <span class="tag">${formatCurrency(contract.monthlyValue)}</span>
+      </div>
+      <h3>${escapeHtml(contract.name)}</h3>
+      <p>${escapeHtml(contract.scope || contract.notes || "Sem escopo registrado")}</p>
+      <div class="tag-row">${brandTags}</div>
+      <div class="tag-row">${services}</div>
+      <div class="card-footer">
+        <span class="owner-pill">
+          <span class="owner-avatar" style="background:#8C1BC7">${getInitials(client?.name || contract.name)}</span>
+          ${escapeHtml(client?.name || "Cliente nao vinculado")}
+        </span>
+        <span class="tag">${formatDate(contract.startDate)} - ${formatDate(contract.endDate)}</span>
       </div>
     </button>
   `;
@@ -2202,6 +2615,51 @@ function openClientDialog(clientId = "") {
   elements.clientDialog.showModal();
 }
 
+function openBrandDialog(brandId = "") {
+  if (!state.clients.length) {
+    alert("Crie um cliente/contratante antes de cadastrar uma marca.");
+    return;
+  }
+
+  const brand = getBrand(brandId);
+  elements.brandForm.reset();
+  elements.brandId.value = brand?.id || "";
+  elements.brandName.value = brand?.name || "";
+  elements.brandClient.value = brand?.clientId || state.clients[0]?.id || "";
+  elements.brandStatus.value = brand?.status || "active";
+  elements.brandSegment.value = brand?.segment || "";
+  elements.brandNotesInternal.value = brand?.notesInternal || "";
+  elements.brandNotesClient.value = brand?.notesClient || "";
+  elements.brandDialogTitle.textContent = brand ? "Editar marca" : "Nova marca";
+  setBrandDialogAccess(Boolean(brand));
+  elements.brandDialog.showModal();
+}
+
+function openContractDialog(contractId = "") {
+  if (!state.clients.length) {
+    alert("Crie um cliente/contratante antes de cadastrar um contrato.");
+    return;
+  }
+
+  const contract = getContract(contractId);
+  elements.contractForm.reset();
+  elements.contractId.value = contract?.id || "";
+  elements.contractClient.value = contract?.clientId || state.clients[0]?.id || "";
+  elements.contractName.value = contract?.name || "";
+  elements.contractStatus.value = contract?.status || "draft";
+  elements.contractMonthlyValue.value = contract?.monthlyValue || "";
+  elements.contractStartDate.value = contract?.startDate || "";
+  elements.contractEndDate.value = contract?.endDate || "";
+  elements.contractServices.value = (contract?.services || []).join("\n");
+  elements.contractScope.value = contract?.scope || "";
+  elements.contractPaymentTerms.value = contract?.paymentTerms || "";
+  elements.contractNotes.value = contract?.notes || "";
+  renderContractBrandOptions(contract?.brandIds || []);
+  elements.contractDialogTitle.textContent = contract ? "Editar contrato" : "Novo contrato";
+  setContractDialogAccess(Boolean(contract));
+  elements.contractDialog.showModal();
+}
+
 function setDemandDialogAccess() {
   const readonly = isClientAccess();
   setFormReadonly(elements.demandForm, readonly);
@@ -2217,10 +2675,47 @@ function setClientDialogAccess(hasClient) {
   elements.clientForm.querySelector(".modal-actions .primary-button").hidden = readonly;
 }
 
+function setBrandDialogAccess(hasBrand) {
+  const readonly = !isAdminAccess();
+  setFormReadonly(elements.brandForm, readonly);
+  elements.deleteBrandButton.hidden = readonly || !hasBrand;
+  elements.brandForm.querySelector(".modal-actions .primary-button").hidden = readonly;
+}
+
+function setContractDialogAccess(hasContract) {
+  const readonly = !isAdminAccess();
+  setFormReadonly(elements.contractForm, readonly);
+  elements.deleteContractButton.hidden = readonly || !hasContract;
+  elements.contractForm.querySelector(".modal-actions .primary-button").hidden = readonly;
+}
+
 function setFormReadonly(form, readonly) {
   form.querySelectorAll("input, textarea, select").forEach((field) => {
     field.disabled = readonly;
   });
+}
+
+function renderContractBrandOptions(selectedBrandIds = []) {
+  const clientId = elements.contractClient.value;
+  const selectedIds = new Set(selectedBrandIds);
+  const brands = getClientBrands(clientId);
+
+  elements.contractBrands.innerHTML = brands.length
+    ? brands
+        .map(
+          (brand) => `
+            <label class="person-check">
+              <input type="checkbox" value="${brand.id}" ${selectedIds.has(brand.id) ? "checked" : ""} />
+              <span class="owner-avatar" style="background:#6961EC">${getInitials(brand.name)}</span>
+              <span>
+                <strong>${escapeHtml(brand.name)}</strong>
+                <small>${escapeHtml(brandStatusLabels[brand.status] || brand.status || "Marca")}</small>
+              </span>
+            </label>
+          `,
+        )
+        .join("")
+    : `<p class="form-hint">Nenhuma marca vinculada a este cliente ainda.</p>`;
 }
 
 function renderClientProjectPeople(client) {
@@ -2318,6 +2813,8 @@ async function loadSupabaseClients() {
   const { data, error } = await client.from("clients").select("*").order("name", { ascending: true });
 
   if (error) throw error;
+  // TODO remove debug after Phase 1.2.
+  console.log("[SOU Debug Phase 1.2] clients loaded from Supabase", { count: data?.length || 0 });
   return (data || []).map(mapSupabaseClientToLocalClient);
 }
 
@@ -2344,12 +2841,26 @@ async function deleteClientFromSupabase(clientData) {
 
 async function syncClientsFromSupabase() {
   try {
-    if (!canUseSupabaseClients() || !window.SOU_SUPABASE_AUTH?.getCurrentSession) return;
+    if (!canUseSupabaseClients() || !window.SOU_SUPABASE_AUTH?.getCurrentSession) {
+      updatePhase12Debug("clients", "sem config/auth api");
+      // TODO remove debug after Phase 1.2.
+      console.log("[SOU Debug Phase 1.2] clients Supabase sync skipped", {
+        hasConfig: canUseSupabaseClients(),
+        hasAuth: Boolean(window.SOU_SUPABASE_AUTH?.getCurrentSession),
+      });
+      return;
+    }
     const { session } = await window.SOU_SUPABASE_AUTH.getCurrentSession();
-    if (!session) return;
+    if (!session) {
+      updatePhase12Debug("clients", "sem sessao Supabase");
+      // TODO remove debug after Phase 1.2.
+      console.log("[SOU Debug Phase 1.2] clients Supabase sync skipped: no active Supabase session");
+      return;
+    }
 
     const remoteClients = await loadSupabaseClients();
     if (!remoteClients.length) {
+      updatePhase12Debug("clients", "query ok: 0 clientes; fallback preservado");
       if (state.clientsSource === "supabase") {
         state.clients = [];
         saveState();
@@ -2364,10 +2875,341 @@ async function syncClientsFromSupabase() {
     state.clients = remoteClients.map(normalizeClient);
     state.clientsSource = "supabase";
     state.deletedClientIds = [];
+    updatePhase12Debug("clients", `ok: ${state.clients.length} clientes`);
+    // TODO remove debug after Phase 1.2.
+    console.log("[SOU Debug Phase 1.2] clients source updated", {
+      clientsSource: state.clientsSource,
+      count: state.clients.length,
+    });
     saveState();
     render();
   } catch (error) {
+    updatePhase12Debug("clients", `erro: ${error.message || "desconhecido"}`);
     console.log("[SOU Supabase Clients] usando clientes locais como fallback", error);
+    // TODO remove debug after Phase 1.2.
+    console.log("[SOU Debug Phase 1.2] clients fallback source", {
+      clientsSource: state.clientsSource,
+      count: state.clients?.length || 0,
+      error,
+    });
+  }
+}
+
+function canUseSupabaseBrands() {
+  return Boolean(window.supabase?.createClient && window.hasSouSupabaseConfig?.());
+}
+
+function mapSupabaseBrandToLocalBrand(row) {
+  return normalizeBrand({
+    id: row.id,
+    supabaseId: row.id,
+    clientId: row.client_id,
+    name: row.name,
+    slug: row.slug,
+    status: row.status,
+    segment: row.description,
+    notesInternal: row.notes,
+    notesClient: "",
+  });
+}
+
+function mapLocalBrandToSupabasePayload(brand) {
+  const clientId = getClientSupabaseId(brand.clientId);
+  return {
+    client_id: clientId,
+    name: brand.name,
+    slug: brand.slug || slugify(brand.name),
+    status: brand.status,
+    description: brand.segment || null,
+    instagram: null,
+    website: null,
+    notes: [brand.notesInternal, brand.notesClient].filter(Boolean).join("\n\n") || null,
+  };
+}
+
+async function loadSupabaseBrands() {
+  if (!canUseSupabaseBrands()) return [];
+  const client = getSupabaseClientInstance();
+  const { data, error } = await client.from("brands").select("*").order("name", { ascending: true });
+
+  if (error) throw error;
+  // TODO remove debug after Phase 1.2.
+  console.log("[SOU Debug Phase 1.2] brands loaded from Supabase", { count: data?.length || 0 });
+  return (data || []).map(mapSupabaseBrandToLocalBrand);
+}
+
+async function saveBrandToSupabase(brandData) {
+  if (!canUseSupabaseBrands()) return null;
+  const client = getSupabaseClientInstance();
+  const payload = mapLocalBrandToSupabasePayload(brandData);
+  // TODO remove debug after Phase 1.2.
+  console.log("[SOU Debug Phase 1.2] brand save attempt", {
+    mode: brandData.supabaseId ? "update" : "insert",
+    brand: brandData,
+    payload,
+    clientsSource: state.clientsSource,
+    brandsSource: state.brandsSource,
+  });
+  const query = brandData.supabaseId
+    ? client.from("brands").update(payload).eq("id", brandData.supabaseId).select("*").single()
+    : client.from("brands").insert(payload).select("*").single();
+  const { data, error } = await query;
+
+  if (error) {
+    // TODO remove debug after Phase 1.2.
+    console.log("[SOU Debug Phase 1.2] brand save error", { error, payload });
+    updatePhase12Debug("brands", `erro ao salvar marca: ${error.message || "desconhecido"}`);
+    throw error;
+  }
+  // TODO remove debug after Phase 1.2.
+  console.log("[SOU Debug Phase 1.2] brand save success", { data });
+  updatePhase12Debug("brands", `marca salva no Supabase: ${data.id}`);
+  return mapSupabaseBrandToLocalBrand(data);
+}
+
+async function deleteBrandFromSupabase(brandData) {
+  if (!canUseSupabaseBrands() || !brandData?.supabaseId) return;
+  const client = getSupabaseClientInstance();
+  // TODO remove debug after Phase 1.2.
+  console.log("[SOU Debug Phase 1.2] brand delete attempt", {
+    id: brandData.supabaseId,
+    brand: brandData,
+  });
+  const { error } = await client.from("brands").delete().eq("id", brandData.supabaseId);
+
+  if (error) {
+    // TODO remove debug after Phase 1.2.
+    console.log("[SOU Debug Phase 1.2] brand delete error", { error, brand: brandData });
+    updatePhase12Debug("brands", `erro ao excluir marca: ${error.message || "desconhecido"}`);
+    throw error;
+  }
+  // TODO remove debug after Phase 1.2.
+  console.log("[SOU Debug Phase 1.2] brand delete success", { id: brandData.supabaseId });
+  updatePhase12Debug("brands", `marca excluida no Supabase: ${brandData.supabaseId}`);
+}
+
+async function syncBrandsFromSupabase() {
+  try {
+    if (!canUseSupabaseBrands() || !window.SOU_SUPABASE_AUTH?.getCurrentSession) {
+      updatePhase12Debug("brands", "sem config/auth api");
+      // TODO remove debug after Phase 1.2.
+      console.log("[SOU Debug Phase 1.2] brands Supabase sync skipped", {
+        hasConfig: canUseSupabaseBrands(),
+        hasAuth: Boolean(window.SOU_SUPABASE_AUTH?.getCurrentSession),
+      });
+      return;
+    }
+    const { session } = await window.SOU_SUPABASE_AUTH.getCurrentSession();
+    if (!session) {
+      updatePhase12Debug("brands", "sem sessao Supabase");
+      // TODO remove debug after Phase 1.2.
+      console.log("[SOU Debug Phase 1.2] brands Supabase sync skipped: no active Supabase session");
+      return;
+    }
+
+    const remoteBrands = await loadSupabaseBrands();
+    if (!remoteBrands.length) {
+      state.brands = [];
+      state.brandsSource = "supabase";
+      state.deletedBrandIds = [];
+      updatePhase12Debug("brands", "ok: 0 marcas");
+      // TODO remove debug after Phase 1.2.
+      console.log("[SOU Debug Phase 1.2] brands source updated", {
+        brandsSource: state.brandsSource,
+        count: state.brands.length,
+      });
+      saveState();
+      render();
+      return;
+    }
+
+    state.brands = remoteBrands.map(normalizeBrand);
+    state.brandsSource = "supabase";
+    state.deletedBrandIds = [];
+    updatePhase12Debug("brands", `ok: ${state.brands.length} marcas`);
+    // TODO remove debug after Phase 1.2.
+    console.log("[SOU Debug Phase 1.2] brands source updated", {
+      brandsSource: state.brandsSource,
+      count: state.brands.length,
+    });
+    saveState();
+    render();
+  } catch (error) {
+    updatePhase12Debug("brands", `erro: ${error.message || "desconhecido"}`);
+    console.log("[SOU Supabase Brands] usando marcas locais como fallback", error);
+    // TODO remove debug after Phase 1.2.
+    console.log("[SOU Debug Phase 1.2] brands fallback source", {
+      brandsSource: state.brandsSource,
+      count: state.brands?.length || 0,
+      error,
+    });
+  }
+}
+
+function canUseSupabaseContracts() {
+  return Boolean(window.supabase?.createClient && window.hasSouSupabaseConfig?.());
+}
+
+function mapSupabaseContractToLocalContract(row, brandIds = []) {
+  return normalizeContract({
+    id: row.id,
+    supabaseId: row.id,
+    clientId: row.client_id,
+    brandIds,
+    name: row.name,
+    status: row.status,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    monthlyValue: row.monthly_value,
+    paymentTerms: row.payment_terms,
+    services: Array.isArray(row.services) ? row.services : [],
+    scope: row.scope,
+    notes: row.notes,
+  });
+}
+
+function mapLocalContractToSupabasePayload(contract) {
+  return {
+    client_id: getClientSupabaseId(contract.clientId),
+    name: contract.name,
+    status: contract.status,
+    start_date: contract.startDate || null,
+    end_date: contract.endDate || null,
+    monthly_value: contract.monthlyValue === "" || contract.monthlyValue === null ? null : Number(contract.monthlyValue),
+    payment_terms: contract.paymentTerms || null,
+    services: contract.services || [],
+    scope: contract.scope || null,
+    notes: contract.notes || null,
+  };
+}
+
+async function loadSupabaseContracts() {
+  if (!canUseSupabaseContracts()) return [];
+  const client = getSupabaseClientInstance();
+  const { data: contracts, error: contractError } = await client
+    .from("contracts")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (contractError) throw contractError;
+
+  const contractIds = (contracts || []).map((contract) => contract.id);
+  let links = [];
+  if (contractIds.length) {
+    const { data: linkRows, error: linkError } = await client
+      .from("contract_brands")
+      .select("contract_id, brand_id")
+      .in("contract_id", contractIds);
+
+    if (linkError) throw linkError;
+    links = linkRows || [];
+  }
+
+  const brandsByContract = links.reduce((acc, link) => {
+    acc[link.contract_id] = acc[link.contract_id] || [];
+    acc[link.contract_id].push(link.brand_id);
+    return acc;
+  }, {});
+
+  // TODO remove debug after contracts phase.
+  console.log("[SOU Debug Contracts] contracts loaded from Supabase", {
+    count: contracts?.length || 0,
+    links: links.length,
+  });
+
+  return (contracts || []).map((contract) => mapSupabaseContractToLocalContract(contract, brandsByContract[contract.id] || []));
+}
+
+async function saveContractToSupabase(contractData) {
+  if (!canUseSupabaseContracts()) return null;
+  const clientId = getClientSupabaseId(contractData.clientId);
+  if (!clientId) throw new Error("Cliente sem UUID real do Supabase. Salve/sincronize o cliente antes do contrato.");
+
+  const client = getSupabaseClientInstance();
+  const payload = mapLocalContractToSupabasePayload(contractData);
+  // TODO remove debug after contracts phase.
+  console.log("[SOU Debug Contracts] contract save attempt", {
+    mode: contractData.supabaseId ? "update" : "insert",
+    payload,
+    brandIds: contractData.brandIds,
+  });
+
+  const query = contractData.supabaseId
+    ? client.from("contracts").update(payload).eq("id", contractData.supabaseId).select("*").single()
+    : client.from("contracts").insert(payload).select("*").single();
+  const { data, error } = await query;
+
+  if (error) {
+    updatePhase12Debug("contracts", `erro ao salvar contrato: ${error.message || "desconhecido"}`);
+    // TODO remove debug after contracts phase.
+    console.log("[SOU Debug Contracts] contract save error", { error, payload });
+    throw error;
+  }
+
+  const contractId = data.id;
+  const { error: deleteLinkError } = await client.from("contract_brands").delete().eq("contract_id", contractId);
+  if (deleteLinkError) throw deleteLinkError;
+
+  const realBrandIds = (contractData.brandIds || [])
+    .map((brandId) => getBrand(brandId)?.supabaseId || brandId)
+    .filter(Boolean);
+
+  if (realBrandIds.length) {
+    const rows = realBrandIds.map((brandId) => ({ contract_id: contractId, brand_id: brandId }));
+    const { error: insertLinkError } = await client.from("contract_brands").insert(rows);
+    if (insertLinkError) throw insertLinkError;
+  }
+
+  updatePhase12Debug("contracts", `contrato salvo no Supabase: ${contractId}`);
+  return mapSupabaseContractToLocalContract(data, realBrandIds);
+}
+
+async function deleteContractFromSupabase(contractData) {
+  if (!canUseSupabaseContracts() || !contractData?.supabaseId) return;
+  const client = getSupabaseClientInstance();
+  // TODO remove debug after contracts phase.
+  console.log("[SOU Debug Contracts] contract delete attempt", { id: contractData.supabaseId });
+  const { error } = await client.from("contracts").delete().eq("id", contractData.supabaseId);
+
+  if (error) {
+    updatePhase12Debug("contracts", `erro ao excluir contrato: ${error.message || "desconhecido"}`);
+    // TODO remove debug after contracts phase.
+    console.log("[SOU Debug Contracts] contract delete error", { error, contract: contractData });
+    throw error;
+  }
+
+  updatePhase12Debug("contracts", `contrato excluido no Supabase: ${contractData.supabaseId}`);
+}
+
+async function syncContractsFromSupabase() {
+  try {
+    if (!canUseSupabaseContracts() || !window.SOU_SUPABASE_AUTH?.getCurrentSession) {
+      updatePhase12Debug("contracts", "sem config/auth api");
+      return;
+    }
+
+    const { session } = await window.SOU_SUPABASE_AUTH.getCurrentSession();
+    if (!session) {
+      updatePhase12Debug("contracts", "sem sessao Supabase");
+      return;
+    }
+
+    const remoteContracts = await loadSupabaseContracts();
+    state.contracts = remoteContracts.map(normalizeContract);
+    state.contractsSource = "supabase";
+    state.deletedContractIds = [];
+    updatePhase12Debug("contracts", `ok: ${state.contracts.length} contratos`);
+    saveState();
+    render();
+  } catch (error) {
+    updatePhase12Debug("contracts", `erro: ${error.message || "desconhecido"}`);
+    console.log("[SOU Supabase Contracts] usando contratos locais como fallback", error);
+    // TODO remove debug after contracts phase.
+    console.log("[SOU Debug Contracts] contracts fallback source", {
+      contractsSource: state.contractsSource,
+      count: state.contracts?.length || 0,
+      error,
+    });
   }
 }
 
@@ -2602,6 +3444,180 @@ async function deleteClient() {
   elements.clientDialog.close();
   render();
   alert("Cliente excluido com sucesso.");
+}
+
+async function saveBrand(event) {
+  event.preventDefault();
+  if (!isAdminAccess()) return;
+
+  let savedToSupabase = false;
+  const currentBrand = getBrand(elements.brandId.value);
+  const brand = normalizeBrand({
+    id: elements.brandId.value || slugify(elements.brandName.value) || crypto.randomUUID(),
+    supabaseId: currentBrand?.supabaseId || "",
+    clientId: elements.brandClient.value,
+    name: elements.brandName.value.trim(),
+    slug: currentBrand?.slug || slugify(elements.brandName.value),
+    status: elements.brandStatus.value,
+    segment: elements.brandSegment.value.trim(),
+    notesInternal: elements.brandNotesInternal.value.trim(),
+    notesClient: elements.brandNotesClient.value.trim(),
+  });
+
+  if (!brand.name || !brand.clientId) return;
+
+  try {
+    // TODO remove debug after Phase 1.2.
+    console.log("[SOU Debug Phase 1.2] brand form submit", {
+      brand,
+      selectedClient: getClient(brand.clientId),
+      clientsSource: state.clientsSource,
+      brandsSource: state.brandsSource,
+    });
+    const supabaseBrand = await saveBrandToSupabase(brand);
+    if (supabaseBrand?.supabaseId) {
+      const index = state.brands.findIndex((item) => item.id === brand.id || item.supabaseId === supabaseBrand.supabaseId);
+      if (index >= 0) state.brands[index] = supabaseBrand;
+      else state.brands.push(supabaseBrand);
+      state.brandsSource = "supabase";
+      savedToSupabase = true;
+    }
+  } catch (error) {
+    console.log("[SOU Supabase Brands] marca salva apenas localmente", error);
+    if (state.brandsSource === "supabase" || currentSession.authProvider === "supabase") {
+      alert(`Erro ao salvar marca no Supabase: ${error.message || "erro desconhecido"}`);
+      return;
+    }
+  }
+
+  if (savedToSupabase) {
+    elements.brandDialog.close();
+    await syncBrandsFromSupabase();
+    return;
+  }
+
+  const index = state.brands.findIndex((item) => item.id === brand.id);
+  if (index >= 0) state.brands[index] = brand;
+  else state.brands.push(brand);
+  state.deletedBrandIds = (state.deletedBrandIds || []).filter((brandId) => brandId !== brand.id);
+
+  elements.brandDialog.close();
+  render();
+}
+
+async function deleteBrand() {
+  if (!isAdminAccess()) return;
+  const brandId = elements.brandId.value;
+  const brand = getBrand(brandId);
+  if (!brand) return;
+
+  if (!confirm("Excluir esta marca operacional? As demandas nao serao alteradas nesta etapa.")) return;
+
+  try {
+    await deleteBrandFromSupabase(brand);
+    if (brand?.supabaseId) state.brandsSource = "supabase";
+  } catch (error) {
+    console.log("[SOU Supabase Brands] marca excluida apenas localmente", error);
+    if (state.brandsSource === "supabase" || currentSession.authProvider === "supabase") {
+      alert(`Erro ao excluir marca no Supabase: ${error.message || "erro desconhecido"}`);
+      return;
+    }
+  }
+
+  state.brands = state.brands.filter((item) => item.id !== brandId);
+  if (brandsSeed.some((item) => item.id === brandId)) {
+    state.deletedBrandIds = [...new Set([...(state.deletedBrandIds || []), brandId])];
+  }
+  elements.brandDialog.close();
+  render();
+  alert("Marca excluida com sucesso.");
+}
+
+async function saveContract(event) {
+  event.preventDefault();
+  if (!isAdminAccess()) return;
+
+  let savedToSupabase = false;
+  const currentContract = getContract(elements.contractId.value);
+  const contract = normalizeContract({
+    id: elements.contractId.value || crypto.randomUUID(),
+    supabaseId: currentContract?.supabaseId || "",
+    clientId: elements.contractClient.value,
+    brandIds: [...elements.contractBrands.querySelectorAll("input:checked")].map((input) => input.value),
+    name: elements.contractName.value.trim(),
+    status: elements.contractStatus.value,
+    startDate: elements.contractStartDate.value,
+    endDate: elements.contractEndDate.value,
+    monthlyValue: elements.contractMonthlyValue.value,
+    services: elements.contractServices.value
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean),
+    scope: elements.contractScope.value.trim(),
+    paymentTerms: elements.contractPaymentTerms.value.trim(),
+    notes: elements.contractNotes.value.trim(),
+  });
+
+  if (!contract.name || !contract.clientId) return;
+
+  try {
+    const supabaseContract = await saveContractToSupabase(contract);
+    if (supabaseContract?.supabaseId) {
+      const index = state.contracts.findIndex((item) => item.id === contract.id || item.supabaseId === supabaseContract.supabaseId);
+      if (index >= 0) state.contracts[index] = supabaseContract;
+      else state.contracts.push(supabaseContract);
+      state.contractsSource = "supabase";
+      savedToSupabase = true;
+    }
+  } catch (error) {
+    console.log("[SOU Supabase Contracts] contrato salvo apenas localmente", error);
+    if (state.contractsSource === "supabase" || currentSession.authProvider === "supabase") {
+      alert(`Erro ao salvar contrato no Supabase: ${error.message || "erro desconhecido"}`);
+      return;
+    }
+  }
+
+  if (savedToSupabase) {
+    elements.contractDialog.close();
+    await syncContractsFromSupabase();
+    return;
+  }
+
+  const index = state.contracts.findIndex((item) => item.id === contract.id);
+  if (index >= 0) state.contracts[index] = contract;
+  else state.contracts.push(contract);
+  state.deletedContractIds = (state.deletedContractIds || []).filter((contractId) => contractId !== contract.id);
+
+  elements.contractDialog.close();
+  render();
+}
+
+async function deleteContract() {
+  if (!isAdminAccess()) return;
+  const contractId = elements.contractId.value;
+  const contract = getContract(contractId);
+  if (!contract) return;
+
+  if (!confirm("Excluir este contrato? As marcas e clientes nao serao excluidos.")) return;
+
+  try {
+    await deleteContractFromSupabase(contract);
+    if (contract?.supabaseId) state.contractsSource = "supabase";
+  } catch (error) {
+    console.log("[SOU Supabase Contracts] contrato excluido apenas localmente", error);
+    if (state.contractsSource === "supabase" || currentSession.authProvider === "supabase") {
+      alert(`Erro ao excluir contrato no Supabase: ${error.message || "erro desconhecido"}`);
+      return;
+    }
+  }
+
+  state.contracts = state.contracts.filter((item) => item.id !== contractId);
+  if (contractsSeed.some((item) => item.id === contractId)) {
+    state.deletedContractIds = [...new Set([...(state.deletedContractIds || []), contractId])];
+  }
+  elements.contractDialog.close();
+  render();
+  alert("Contrato excluido com sucesso.");
 }
 
 function generateCycleDemands(event) {
@@ -2925,7 +3941,14 @@ function importData(event) {
       state = {
         people: imported.people.map(normalizePerson),
         clients: Array.isArray(imported.clients) ? imported.clients.map(normalizeClient) : clientsSeed,
+        clientsSource: imported.clientsSource || "local",
         deletedClientIds: Array.isArray(imported.deletedClientIds) ? imported.deletedClientIds : [],
+        brands: Array.isArray(imported.brands) ? imported.brands.map(normalizeBrand) : brandsSeed,
+        brandsSource: imported.brandsSource || "local",
+        deletedBrandIds: Array.isArray(imported.deletedBrandIds) ? imported.deletedBrandIds : [],
+        contracts: Array.isArray(imported.contracts) ? imported.contracts.map(normalizeContract) : contractsSeed,
+        contractsSource: imported.contractsSource || "local",
+        deletedContractIds: Array.isArray(imported.deletedContractIds) ? imported.deletedContractIds : [],
         demands: imported.demands.map(normalizeDemand),
         processes: Array.isArray(imported.processes) ? imported.processes : processesSeed,
         roles: Array.isArray(imported.roles) ? imported.roles : rolesSeed,
@@ -2986,9 +4009,16 @@ function formatHours(value) {
 }
 
 function formatDate(value) {
+  if (!value) return "Sem data";
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(
     new Date(`${value}T00:00:00`),
   );
+}
+
+function formatCurrency(value) {
+  const number = Number(value || 0);
+  if (!number) return "Sem valor";
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(number);
 }
 
 function createLocalDate(date, time) {
@@ -3090,6 +4120,13 @@ elements.addClientButton.addEventListener("click", () => openClientDialog());
 elements.clientForm.addEventListener("submit", saveClient);
 elements.deleteClientButton.addEventListener("click", deleteClient);
 elements.addClientDemandButton.addEventListener("click", openDemandFromClient);
+elements.addBrandButton.addEventListener("click", () => openBrandDialog());
+elements.brandForm.addEventListener("submit", saveBrand);
+elements.deleteBrandButton.addEventListener("click", deleteBrand);
+elements.addContractButton.addEventListener("click", () => openContractDialog());
+elements.contractForm.addEventListener("submit", saveContract);
+elements.deleteContractButton.addEventListener("click", deleteContract);
+elements.contractClient.addEventListener("change", () => renderContractBrandOptions());
 elements.generateCycleButton.addEventListener("click", openCycleDialog);
 elements.cycleForm.addEventListener("submit", generateCycleDemands);
 elements.addPersonButton.addEventListener("click", () => openPersonDialog());
@@ -3130,4 +4167,3 @@ document.querySelectorAll("[data-close-dialog]").forEach((button) => {
 
 render();
 restoreSupabaseSession();
-syncClientsFromSupabase();

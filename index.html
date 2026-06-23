@@ -59,6 +59,8 @@
         <nav class="view-tabs" aria-label="Visoes da plataforma">
           <button class="tab-button active" data-view="dashboard" type="button">Dashboard</button>
           <button class="tab-button" data-view="clients" type="button">Clientes</button>
+          <button class="tab-button" data-view="brands" type="button">Marcas</button>
+          <button class="tab-button" data-view="contracts" type="button">Contratos</button>
           <button class="tab-button" data-view="demands" type="button">Demandas</button>
           <button class="tab-button" data-view="processes" type="button">Processos</button>
           <button class="tab-button" data-view="roles" type="button">Funcoes</button>
@@ -84,6 +86,14 @@
             Visualizar como
             <select id="accessProfile"></select>
           </label>
+        </section>
+
+        <!-- TODO remove debug after Phase 1.2: painel temporario de fonte de dados/auth. -->
+        <section class="panel" id="dataSourceDebugPanel">
+          <div class="panel-header">
+            <h2>Debug fontes</h2>
+          </div>
+          <p class="form-hint" id="dataSourceDebug">Session: carregando | Clients source: carregando | Brands source: carregando | Clients sync: carregando | Brands sync: carregando</p>
         </section>
 
         <section class="panel">
@@ -141,6 +151,8 @@
           </div>
           <button class="ghost-button" id="generateCycleButton" type="button">Gerar ciclo</button>
           <button class="primary-button" id="addClientButton" type="button" hidden>Novo cliente</button>
+          <button class="primary-button" id="addBrandButton" type="button" hidden>Nova marca</button>
+          <button class="primary-button" id="addContractButton" type="button" hidden>Novo contrato</button>
           <button class="primary-button" id="addDemandButton" type="button">Nova demanda</button>
           <button class="primary-button" id="addProcessButton" type="button" hidden>Novo processo</button>
         </div>
@@ -149,6 +161,8 @@
 
         <section class="dashboard-grid" id="dashboardGrid"></section>
         <section class="client-grid" id="clientGrid" hidden></section>
+        <section class="client-grid" id="brandGrid" hidden></section>
+        <section class="client-grid" id="contractGrid" hidden></section>
         <section class="board" id="board"></section>
         <section class="process-grid" id="processGrid" hidden></section>
         <section class="role-grid" id="roleGrid" hidden></section>
@@ -448,6 +462,118 @@
       </form>
     </dialog>
 
+    <dialog id="brandDialog">
+      <form method="dialog" class="modal-form wide" id="brandForm">
+        <div class="modal-header">
+          <h2 id="brandDialogTitle">Nova marca</h2>
+          <button class="icon-button" data-close-dialog="brandDialog" title="Fechar" type="button">×</button>
+        </div>
+        <input id="brandId" type="hidden" />
+        <div class="field-grid">
+          <label>
+            Marca operacional
+            <input id="brandName" required maxlength="90" />
+          </label>
+          <label>
+            Contratante
+            <select id="brandClient" required></select>
+          </label>
+          <label>
+            Status
+            <select id="brandStatus">
+              <option value="active">Ativa</option>
+              <option value="inactive">Inativa</option>
+              <option value="onboarding">Onboarding</option>
+              <option value="paused">Pausada</option>
+              <option value="closed">Encerrada</option>
+            </select>
+          </label>
+          <label>
+            Segmento
+            <input id="brandSegment" maxlength="90" />
+          </label>
+        </div>
+        <label>
+          Observacoes internas
+          <textarea id="brandNotesInternal" rows="4" maxlength="700"></textarea>
+        </label>
+        <label>
+          Observacoes para cliente
+          <textarea id="brandNotesClient" rows="3" maxlength="500"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button class="ghost-button danger" id="deleteBrandButton" type="button">Excluir</button>
+          <button class="primary-button" value="default" type="submit">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="contractDialog">
+      <form method="dialog" class="modal-form wide" id="contractForm">
+        <div class="modal-header">
+          <h2 id="contractDialogTitle">Novo contrato</h2>
+          <button class="icon-button" data-close-dialog="contractDialog" title="Fechar" type="button">×</button>
+        </div>
+        <input id="contractId" type="hidden" />
+        <div class="field-grid">
+          <label>
+            Cliente contratante
+            <select id="contractClient" required></select>
+          </label>
+          <label>
+            Nome do contrato
+            <input id="contractName" required maxlength="120" />
+          </label>
+          <label>
+            Status
+            <select id="contractStatus">
+              <option value="draft">Rascunho</option>
+              <option value="active">Ativo</option>
+              <option value="paused">Pausado</option>
+              <option value="ended">Encerrado</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+          </label>
+          <label>
+            Valor mensal
+            <input id="contractMonthlyValue" type="number" min="0" step="0.01" />
+          </label>
+          <label>
+            Inicio
+            <input id="contractStartDate" type="date" />
+          </label>
+          <label>
+            Fim
+            <input id="contractEndDate" type="date" />
+          </label>
+        </div>
+        <label>
+          Marcas vinculadas
+          <div class="checklist-options" id="contractBrands"></div>
+        </label>
+        <label>
+          Servicos contratados
+          <textarea id="contractServices" rows="3" maxlength="700" placeholder="Um servico por linha"></textarea>
+        </label>
+        <label>
+          Escopo
+          <textarea id="contractScope" rows="4" maxlength="900"></textarea>
+        </label>
+        <label>
+          Condicoes de pagamento
+          <textarea id="contractPaymentTerms" rows="3" maxlength="700"></textarea>
+        </label>
+        <label>
+          Observacoes
+          <textarea id="contractNotes" rows="3" maxlength="700"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button class="ghost-button danger" id="deleteContractButton" type="button">Excluir</button>
+          <button class="primary-button" value="default" type="submit">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="cycleDialog">
       <form method="dialog" class="modal-form wide" id="cycleForm">
         <div class="modal-header">
@@ -525,6 +651,6 @@
     <script src="supabaseConfig.js"></script>
     <script src="supabaseClient.js"></script>
     <script src="supabaseAuth.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=contracts-basic-1"></script>
   </body>
 </html>
