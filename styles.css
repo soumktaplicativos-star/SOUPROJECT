@@ -379,6 +379,35 @@ textarea:focus {
   text-align: left;
 }
 
+.person-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  justify-self: end;
+  min-width: max-content;
+}
+
+.person-edit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  border: 1px solid rgba(105, 97, 236, 0.28);
+  border-radius: 8px;
+  background: rgba(105, 97, 236, 0.12);
+  color: #dbeafe;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 7px 9px;
+  white-space: nowrap;
+}
+
+.person-edit-button:hover {
+  background: rgba(105, 97, 236, 0.22);
+}
+
 .person-row.active {
   border-color: rgba(255, 255, 255, 0.28);
   background: #fff;
@@ -431,6 +460,11 @@ textarea:focus {
 .person-row.active .person-count {
   background: var(--surface-soft);
   color: var(--text);
+}
+
+.person-row.active .person-edit-button {
+  color: var(--primary);
+  background: rgba(105, 97, 236, 0.1);
 }
 
 .workspace {
@@ -871,6 +905,10 @@ dialog {
   box-shadow: 0 30px 90px rgba(32, 33, 36, 0.25);
 }
 
+dialog.person-dialog {
+  width: min(900px, calc(100vw - 28px));
+}
+
 dialog::backdrop {
   background: rgba(32, 33, 36, 0.35);
 }
@@ -883,6 +921,12 @@ dialog::backdrop {
 
 .modal-form.wide {
   width: min(720px, calc(100vw - 28px));
+}
+
+.modal-form.person-form {
+  width: 100%;
+  max-height: min(86vh, 840px);
+  overflow: auto;
 }
 
 .modal-header {
@@ -898,8 +942,24 @@ dialog::backdrop {
   gap: 12px;
 }
 
+.form-section {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  padding: 14px;
+}
+
+.form-section h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+}
+
 .modal-actions {
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .template-actions {
@@ -1092,5 +1152,24 @@ dialog::backdrop {
   .process-grid,
   .role-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .person-row {
+    grid-template-columns: 12px minmax(0, 1fr);
+  }
+
+  .person-actions {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .modal-form.person-form {
+    width: calc(100vw - 24px);
+  }
+
+  .field-grid {
+    grid-template-columns: 1fr;
   }
 }

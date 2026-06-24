@@ -12,11 +12,11 @@ const phase12Debug = {
 };
 
 const peopleSeed = [
-  { id: "isabela", name: "Isabela", role: "Direcao estrategica e gestao", email: "", color: "#1864ab" },
-  { id: "laura", name: "Laura", role: "Operacoes e atendimento", email: "", color: "#0ca678" },
-  { id: "yasmin", name: "Yasmin", role: "Trafego pago", email: "", color: "#f08c00" },
-  { id: "meriduarda", name: "Meriduarda", role: "Captacao de conteudo", email: "", color: "#c2255c" },
-  { id: "clarinha", name: "Clarinha", role: "Financeiro, juridico e formalizacoes", email: "", color: "#7048e8" },
+  { id: "isabela", name: "Isabela", role: "Direção estratégica e gestão", email: "", color: "#1864ab" },
+  { id: "laura", name: "Laura", role: "Operações e atendimento", email: "", color: "#0ca678" },
+  { id: "yasmin", name: "Yasmin", role: "Tráfego pago", email: "", color: "#f08c00" },
+  { id: "meriduarda", name: "Meriduarda", role: "Captação de conteúdo", email: "", color: "#c2255c" },
+  { id: "clarinha", name: "Clarinha", role: "Financeiro, jurídico e formalizações", email: "", color: "#7048e8" },
   { id: "comercial", name: "Comercial", role: "Futura contratacao", email: "", color: "#495057" },
   { id: "estrategista", name: "Estrategista", role: "Futura roteirizacao", email: "", color: "#087f5b" },
 ];
@@ -788,6 +788,7 @@ const cycleDemandTemplates = {
 
 const seedData = {
   people: peopleSeed,
+  legacyPeople: peopleSeed,
   collaboratorsSource: "local",
   collaboratorsRemoteCount: 0,
   deletedCollaboratorIds: [],
@@ -938,6 +939,7 @@ const elements = {
   personSpecialties: document.querySelector("#personSpecialties"),
   personNotes: document.querySelector("#personNotes"),
   personColor: document.querySelector("#personColor"),
+  savePersonButton: document.querySelector("#savePersonButton"),
   deletePersonButton: document.querySelector("#deletePersonButton"),
   demandDialog: document.querySelector("#demandDialog"),
   demandForm: document.querySelector("#demandForm"),
@@ -1049,6 +1051,12 @@ function loadState() {
 
     return applySeedMigrations({
       people: parsed.people.length ? parsed.people.map(normalizePerson) : peopleSeed,
+      legacyPeople:
+        Array.isArray(parsed.legacyPeople) && parsed.legacyPeople.length
+          ? parsed.legacyPeople.map(normalizePerson)
+          : parsed.people.filter((person) => !person.supabaseId).length
+            ? parsed.people.filter((person) => !person.supabaseId).map(normalizePerson)
+            : peopleSeed,
       collaboratorsSource: parsed.collaboratorsSource || "local",
       collaboratorsRemoteCount: Number.isFinite(Number(parsed.collaboratorsRemoteCount)) ? Number(parsed.collaboratorsRemoteCount) : 0,
       deletedCollaboratorIds: Array.isArray(parsed.deletedCollaboratorIds) ? parsed.deletedCollaboratorIds : [],
@@ -1215,6 +1223,46 @@ function normalizePerson(person) {
     notes: person.notes || "",
     color: person.color || "#6961EC",
   };
+}
+
+function parsePersonDateInput(value) {
+  const cleanValue = String(value || "").trim();
+  if (!cleanValue) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleanValue)) return cleanValue;
+
+  const match = cleanValue.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+
+  const [, day, month, year] = match;
+  const parsedDate = new Date(Number(year), Number(month) - 1, Number(day));
+  const isValid =
+    parsedDate.getFullYear() === Number(year) &&
+    parsedDate.getMonth() === Number(month) - 1 &&
+    parsedDate.getDate() === Number(day);
+
+  return isValid ? `${year}-${month}-${day}` : null;
+}
+
+function formatPersonDateForInput(value) {
+  const cleanValue = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanValue)) return cleanValue;
+  const [year, month, day] = cleanValue.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function formatInterfaceText(value) {
+  return String(value || "")
+    .replaceAll("Direcao estrategica e gestao", "Direção estratégica e gestão")
+    .replaceAll("Operacoes e atendimento", "Operações e atendimento")
+    .replaceAll("Trafego pago", "Tráfego pago")
+    .replaceAll("Captacao de conteudo", "Captação de conteúdo")
+    .replaceAll("Financeiro, juridico e formalizacoes", "Financeiro, jurídico e formalizações")
+    .replaceAll("Futura contratacao", "Futura contratação")
+    .replaceAll("Futura roteirizacao", "Futura roteirização")
+    .replaceAll("Visao geral", "Visão geral")
+    .replaceAll("Funcao", "Função")
+    .replaceAll("Funcoes", "Funções")
+    .replaceAll("Nao vinculado", "Não vinculado");
 }
 
 function normalizeClient(client) {
@@ -1998,30 +2046,45 @@ function renderPeople() {
 
   elements.personList.innerHTML = rows.join("");
 
-  elements.personList.querySelectorAll(".person-row").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedPersonId = button.dataset.id;
+  elements.personList.querySelectorAll(".person-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      selectedPersonId = row.dataset.id;
       render();
     });
 
-    button.addEventListener("dblclick", () => {
-      if (button.dataset.id !== "todos") openPersonDialog(button.dataset.id);
+    row.addEventListener("dblclick", () => {
+      if (row.dataset.id !== "todos") openPersonDialog(row.dataset.id);
+    });
+  });
+
+  elements.personList.querySelectorAll("[data-person-edit]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openPersonDialog(button.dataset.personEdit);
     });
   });
 }
 
 function personButtonTemplate(person, count) {
   const active = selectedPersonId === person.id ? " active" : "";
-  const displayName = person.displayName || person.name;
+  const displayName = formatInterfaceText(person.displayName || person.name);
+  const roleLabel = formatInterfaceText(person.role);
+  const editAction =
+    person.id === "todos"
+      ? ""
+      : `<button class="person-edit-button" type="button" data-person-edit="${person.id}">Editar</button>`;
   return `
-    <button class="person-row${active}" type="button" data-id="${person.id}">
+    <div class="person-row${active}" role="button" tabindex="0" data-id="${person.id}">
       <span class="person-dot" style="background:${person.color}"></span>
       <span>
         <span class="person-name">${escapeHtml(displayName)}</span>
-        <span class="person-role">${escapeHtml(person.role)}</span>
+        <span class="person-role">${escapeHtml(roleLabel)}</span>
       </span>
-      <span class="person-count">${count}</span>
-    </button>
+      <span class="person-actions">
+        <span class="person-count">${count}</span>
+        ${editAction}
+      </span>
+    </div>
   `;
 }
 
@@ -2044,13 +2107,13 @@ function renderHeader() {
   const person = selectedPersonId === "todos" ? null : getOwner(selectedPersonId);
   const accessClient = isClientAccess() ? getClient(currentAccess.profileId) : null;
   const viewLabels = {
-    dashboard: accessClient ? "Portal do cliente" : person ? "Resumo do colaborador" : "Visao geral da operacao",
+    dashboard: accessClient ? "Portal do cliente" : person ? "Resumo do colaborador" : "Visão geral da operação",
     clients: accessClient ? "Projeto do cliente" : person ? "Clientes do colaborador" : "Carteira de clientes",
     brands: "Marcas operacionais",
     contracts: "Contratos comerciais",
     demands: accessClient ? "Demandas do projeto" : person ? "Demandas do colaborador" : "Todas as demandas",
     processes: person ? "Processos do colaborador" : "Processos da agencia",
-    roles: person ? "Funcao do colaborador" : "Funcoes da equipe",
+    roles: person ? "Função do colaborador" : "Funções da equipe",
   };
   const viewTitles = {
     dashboard: accessClient ? accessClient.name : person ? person.name : "Painel executivo",
@@ -2068,7 +2131,7 @@ function renderHeader() {
     contracts: "Contratos",
     demands: "Demandas",
     processes: "Processos",
-    roles: "Funcoes",
+    roles: "Funções",
   };
 
   elements.pageHeadline.textContent = pageTitles[selectedView];
@@ -2173,7 +2236,7 @@ function renderMetrics() {
 
   const visibleRoles = getVisibleRoles();
   renderMetricItems([
-    ["Funcoes", visibleRoles.length],
+    ["Funções", visibleRoles.length],
     ["Atuais", visibleRoles.filter((role) => !["comercial", "estrategista"].includes(role.personId)).length],
     ["Futuras", visibleRoles.filter((role) => ["comercial", "estrategista"].includes(role.personId)).length],
     ["Pessoas", selectedPersonId === "todos" ? state.people.length : 1],
@@ -2416,7 +2479,7 @@ function brandCardTemplate(brand) {
       <h3>${escapeHtml(brand.name)}</h3>
       <p>${escapeHtml(brand.notesInternal || brand.notesClient || "Sem observacoes")}</p>
       <div class="tag-row">
-        <span class="tag">Contratante: ${escapeHtml(client?.name || "Nao vinculado")}</span>
+        <span class="tag">Contratante: ${escapeHtml(client?.name || "Não vinculado")}</span>
       </div>
       <div class="tag-row">
         <span class="tag ${contractStatusClass}">${escapeHtml(contractStatusLabel)}</span>
@@ -2636,7 +2699,7 @@ function renderRoles() {
   const visible = getVisibleRoles();
   elements.roleGrid.innerHTML = visible.length
     ? visible.map(roleCardTemplate).join("")
-    : `<div class="empty-state">Nenhuma funcao encontrada</div>`;
+    : `<div class="empty-state">Nenhuma função encontrada</div>`;
 
   elements.roleGrid.querySelectorAll(".role-card").forEach((card) => {
     card.addEventListener("click", () => openRoleDialog(card.dataset.personId));
@@ -2677,8 +2740,8 @@ function openPersonDialog(personId = "") {
   elements.personDocument.value = person?.document || "";
   elements.personRelationshipType.value = person?.relationshipType || "";
   elements.personStatus.value = person?.status || "active";
-  elements.personStartDate.value = person?.startDate || "";
-  elements.personEndDate.value = person?.endDate || "";
+  elements.personStartDate.value = formatPersonDateForInput(person?.startDate);
+  elements.personEndDate.value = formatPersonDateForInput(person?.endDate);
   elements.personSpecialties.value = (person?.specialties || []).join(", ");
   elements.personNotes.value = person?.notes || "";
   elements.personColor.value = person?.color || "#2f80ed";
@@ -3016,6 +3079,27 @@ function mapLocalPersonToSupabaseCollaboratorPayload(person) {
   };
 }
 
+function mergeRemoteAndLegacyCollaborators(remoteCollaborators, legacyCollaborators) {
+  const seen = new Set();
+  const merged = [];
+
+  [...remoteCollaborators, ...legacyCollaborators].forEach((person) => {
+    const normalized = normalizePerson(person);
+    const emailKey = normalized.email ? `email:${normalized.email.toLowerCase()}` : "";
+    const idKey = normalized.supabaseId ? `supabase:${normalized.supabaseId}` : `id:${normalized.id}`;
+    const legacyIdKey = `id:${normalized.id}`;
+
+    if ((emailKey && seen.has(emailKey)) || seen.has(idKey) || seen.has(legacyIdKey)) return;
+
+    if (emailKey) seen.add(emailKey);
+    seen.add(idKey);
+    seen.add(legacyIdKey);
+    merged.push(normalized);
+  });
+
+  return merged;
+}
+
 async function loadSupabaseCollaborators() {
   if (!canUseSupabaseCollaborators()) return [];
   const client = getSupabaseClientInstance();
@@ -3079,18 +3163,23 @@ async function syncCollaboratorsFromSupabase() {
     }
 
     const remoteCollaborators = await loadSupabaseCollaborators();
+    const currentLegacyPeople = (state.legacyPeople?.length ? state.legacyPeople : state.people.filter((person) => !person.supabaseId)).map(normalizePerson);
+    const legacyPeople = currentLegacyPeople.length ? currentLegacyPeople : peopleSeed.map(normalizePerson);
+
+    state.legacyPeople = legacyPeople;
     state.collaboratorsSource = "supabase";
     state.collaboratorsRemoteCount = remoteCollaborators.length;
+    state.people = mergeRemoteAndLegacyCollaborators(remoteCollaborators, legacyPeople);
+
     if (!remoteCollaborators.length) {
       updatePhase12Debug("collaborators", "ok: 0 colaboradores no Supabase; people legado preservado");
       saveState();
-      renderDataSourceDebug();
+      render();
       return;
     }
 
-    state.people = remoteCollaborators.map(normalizePerson);
     state.deletedCollaboratorIds = [];
-    updatePhase12Debug("collaborators", `ok: ${state.people.length} colaboradores`);
+    updatePhase12Debug("collaborators", `ok: ${remoteCollaborators.length} Supabase + ${legacyPeople.length} legados`);
     saveState();
     render();
   } catch (error) {
@@ -3575,7 +3664,7 @@ function openRoleDialog(personId) {
   elements.roleTitle.value = role.title || person?.role || "";
   elements.roleObjective.value = role.objective || "";
   elements.roleResponsibilities.value = (role.responsibilities || []).join("\n");
-  elements.roleDialogTitle.textContent = `Editar funcao - ${person?.name || "Equipe"}`;
+  elements.roleDialogTitle.textContent = `Editar função - ${person?.name || "Equipe"}`;
   elements.roleDialog.showModal();
 }
 
@@ -3600,9 +3689,33 @@ function openProcessDialog(processId = "") {
 }
 
 async function savePerson(event) {
-  event.preventDefault();
+  event?.preventDefault?.();
   if (!isAdminAccess()) return;
+  // TODO remove debug after collaborators phase.
+  console.log("[SOU Debug Collaborators] person save handler called", {
+    hasId: Boolean(elements.personId.value),
+    hasName: Boolean(elements.personName.value.trim()),
+    hasRole: Boolean(elements.personRole.value.trim()),
+    status: elements.personStatus.value,
+    relationshipType: elements.personRelationshipType.value,
+    collaboratorsSource: state.collaboratorsSource,
+    authProvider: currentSession.authProvider,
+  });
   const currentPerson = getOwner(elements.personId.value);
+  const isEditingLegacyPerson = Boolean(
+    currentPerson?.id &&
+      !currentPerson.supabaseId &&
+      (state.legacyPeople || []).some((person) => person.id === currentPerson.id),
+  );
+  const startDate = parsePersonDateInput(elements.personStartDate.value);
+  const endDate = parsePersonDateInput(elements.personEndDate.value);
+
+  if (startDate === null || endDate === null) {
+    updatePhase12Debug("collaborators", "save bloqueado: data invalida");
+    alert("Use datas no formato dd/mm/aaaa.");
+    return;
+  }
+
   const person = normalizePerson({
     id: elements.personId.value || crypto.randomUUID(),
     supabaseId: currentPerson?.supabaseId || "",
@@ -3620,8 +3733,8 @@ async function savePerson(event) {
     document: elements.personDocument.value.trim(),
     relationshipType: elements.personRelationshipType.value,
     status: elements.personStatus.value || "active",
-    startDate: elements.personStartDate.value,
-    endDate: elements.personEndDate.value,
+    startDate,
+    endDate,
     specialties: elements.personSpecialties.value
       .split(/,|\n/)
       .map((item) => item.trim())
@@ -3630,9 +3743,12 @@ async function savePerson(event) {
     color: elements.personColor.value,
   });
 
-  if (!person.name || !person.role) return;
+  if (!person.name || !person.role) {
+    updatePhase12Debug("collaborators", "save bloqueado: nome/cargo obrigatorios");
+    return;
+  }
 
-  if ((state.collaboratorsSource === "supabase" || currentSession.authProvider === "supabase") && canUseSupabaseCollaborators()) {
+  if (!isEditingLegacyPerson && (state.collaboratorsSource === "supabase" || currentSession.authProvider === "supabase") && canUseSupabaseCollaborators()) {
     try {
       const savedPerson = await saveCollaboratorToSupabase(person);
       if (savedPerson) {
@@ -3649,14 +3765,21 @@ async function savePerson(event) {
       }
     } catch (error) {
       // TODO remove debug after collaborators phase.
-      console.error("[SOU Ops] Falha ao salvar colaborador no Supabase. Mantendo fallback local.", error);
+      console.error("[SOU Ops] Falha ao salvar colaborador no Supabase.", error);
       updatePhase12Debug("collaborators", `save erro: ${error.message || "falha desconhecida"}`);
+      return;
     }
   }
 
   const index = state.people.findIndex((item) => item.id === person.id);
   if (index >= 0) state.people[index] = person;
   else state.people.push(person);
+
+  if (isEditingLegacyPerson || !person.supabaseId) {
+    const legacyIndex = (state.legacyPeople || []).findIndex((item) => item.id === person.id);
+    if (legacyIndex >= 0) state.legacyPeople[legacyIndex] = person;
+    else state.legacyPeople = [...(state.legacyPeople || []), person];
+  }
 
   const role = state.roles.find((item) => item.personId === person.id);
   if (role && !role.title) role.title = person.role;
@@ -3679,7 +3802,7 @@ async function deletePerson() {
     return;
   }
 
-  if ((state.collaboratorsSource === "supabase" || person?.supabaseId) && canUseSupabaseCollaborators()) {
+  if (person?.supabaseId && canUseSupabaseCollaborators()) {
     try {
       await deleteCollaboratorFromSupabase(person);
       state.people = state.people.filter((item) => item.id !== personId && item.supabaseId !== person?.supabaseId);
@@ -3698,6 +3821,7 @@ async function deletePerson() {
   }
 
   state.people = state.people.filter((person) => person.id !== personId);
+  state.legacyPeople = (state.legacyPeople || []).filter((person) => person.id !== personId);
   state.roles = state.roles.filter((role) => role.personId !== personId);
   selectedPersonId = "todos";
   elements.personDialog.close();
@@ -4521,6 +4645,7 @@ elements.addPersonButton.addEventListener("click", () => openPersonDialog());
 elements.addDemandButton.addEventListener("click", () => openDemandDialog());
 elements.addProcessButton.addEventListener("click", () => openProcessDialog());
 elements.personForm.addEventListener("submit", savePerson);
+elements.savePersonButton.addEventListener("click", savePerson);
 elements.demandForm.addEventListener("submit", saveDemand);
 elements.processForm.addEventListener("submit", saveProcess);
 elements.roleForm.addEventListener("submit", saveRole);
