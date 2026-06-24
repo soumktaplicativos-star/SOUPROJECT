@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SOU Demandas</title>
-    <link rel="stylesheet" href="styles.css?v=20260624-modal-layout" />
+    <link rel="stylesheet" href="styles.css?v=20260624-auth-account" />
   </head>
   <body>
     <section class="login-screen" id="loginScreen">
@@ -72,6 +72,7 @@
           </div>
           <div class="session-card">
             <span id="sessionLabel">Direção</span>
+            <button class="ghost-button" id="accountButton" type="button">Minha conta</button>
             <button class="ghost-button" id="logoutButton" type="button">Sair</button>
           </div>
           <label>
@@ -806,10 +807,36 @@
       </form>
     </dialog>
 
+    <dialog id="accountDialog">
+      <form method="dialog" class="modal-form" id="accountForm">
+        <div class="modal-header">
+          <h2>Minha conta</h2>
+          <button class="icon-button" data-close-dialog="accountDialog" title="Fechar" type="button">×</button>
+        </div>
+        <label>
+          E-mail da conta
+          <input id="accountEmail" type="email" readonly />
+        </label>
+        <label>
+          Nova senha
+          <input id="accountNewPassword" type="password" autocomplete="new-password" minlength="8" />
+        </label>
+        <label>
+          Confirmar nova senha
+          <input id="accountConfirmPassword" type="password" autocomplete="new-password" minlength="8" />
+        </label>
+        <p class="account-message" id="accountMessage" hidden></p>
+        <div class="modal-actions">
+          <button class="ghost-button" data-close-dialog="accountDialog" type="button">Cancelar</button>
+          <button class="primary-button" id="saveAccountPasswordButton" type="submit">Salvar senha</button>
+        </div>
+      </form>
+    </dialog>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabaseConfig.js"></script>
     <script src="supabaseClient.js"></script>
-    <script src="supabaseAuth.js"></script>
-    <script src="app.js?v=collaborators-ux-1"></script>
+    <script src="supabaseAuth.js?v=auth-account-1"></script>
+    <script src="app.js?v=auth-account-2"></script>
   </body>
 </html>

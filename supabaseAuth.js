@@ -78,6 +78,11 @@
     return client.auth.signOut();
   }
 
+  async function updatePassword(newPassword) {
+    const client = getSupabaseClient();
+    return client.auth.updateUser({ password: newPassword });
+  }
+
   async function getCurrentUser() {
     const client = getSupabaseClient();
     const { data, error } = await client.auth.getUser();
@@ -179,6 +184,7 @@
     login,
     loginAndGetProfile,
     logout,
+    updatePassword,
     getCurrentUser,
     getCurrentSession,
     getCurrentAuthContext,

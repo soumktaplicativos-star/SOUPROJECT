@@ -887,6 +887,14 @@ const elements = {
   loginEmail: document.querySelector("#loginEmail"),
   loginPassword: document.querySelector("#loginPassword"),
   loginError: document.querySelector("#loginError"),
+  accountButton: document.querySelector("#accountButton"),
+  accountDialog: document.querySelector("#accountDialog"),
+  accountForm: document.querySelector("#accountForm"),
+  accountEmail: document.querySelector("#accountEmail"),
+  accountNewPassword: document.querySelector("#accountNewPassword"),
+  accountConfirmPassword: document.querySelector("#accountConfirmPassword"),
+  accountMessage: document.querySelector("#accountMessage"),
+  saveAccountPasswordButton: document.querySelector("#saveAccountPasswordButton"),
   logoutButton: document.querySelector("#logoutButton"),
   sessionLabel: document.querySelector("#sessionLabel"),
   personList: document.querySelector("#personList"),
@@ -1824,6 +1832,75 @@ async function handleLogout() {
   render();
 }
 
+function openAccountDialog() {
+  if (!isSupabaseSession()) {
+    alert("A alteração de senha está disponível apenas para login Supabase.");
+    return;
+  }
+
+  elements.accountForm.reset();
+  elements.accountEmail.value = currentSession.email || "";
+  elements.accountMessage.hidden = true;
+  elements.accountMessage.textContent = "";
+  elements.accountMessage.className = "account-message";
+  elements.accountDialog.showModal();
+}
+
+function setAccountMessage(message, type = "error") {
+  elements.accountMessage.textContent = message;
+  elements.accountMessage.className = `account-message ${type}`;
+  elements.accountMessage.hidden = false;
+}
+
+async function saveAccountPassword(event) {
+  event.preventDefault();
+  if (!isSupabaseSession()) {
+    setAccountMessage("Entre com login Supabase para alterar a senha.");
+    return;
+  }
+
+  const newPassword = elements.accountNewPassword.value;
+  const confirmPassword = elements.accountConfirmPassword.value;
+
+  if (!newPassword || !confirmPassword) {
+    setAccountMessage("Preencha a nova senha e a confirmação.");
+    return;
+  }
+
+  if (newPassword.length < 8) {
+    setAccountMessage("A senha precisa ter no mínimo 8 caracteres.");
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    setAccountMessage("As senhas não coincidem.");
+    return;
+  }
+
+  if (!window.SOU_SUPABASE_AUTH?.updatePassword || !window.hasSouSupabaseConfig?.()) {
+    setAccountMessage("Supabase Auth ainda não está disponível para alterar senha.");
+    return;
+  }
+
+  elements.saveAccountPasswordButton.disabled = true;
+  try {
+    const { error } = await window.SOU_SUPABASE_AUTH.updatePassword(newPassword);
+    elements.accountNewPassword.value = "";
+    elements.accountConfirmPassword.value = "";
+
+    if (error) {
+      setAccountMessage(error.message || "Não foi possível alterar a senha.");
+      return;
+    }
+
+    setAccountMessage("Senha alterada com sucesso. Use a nova senha no próximo login.", "success");
+  } catch (error) {
+    setAccountMessage(error.message || "Não foi possível alterar a senha.");
+  } finally {
+    elements.saveAccountPasswordButton.disabled = false;
+  }
+}
+
 function getVisibleDemands() {
   const status = elements.statusFilter.value;
   const search = elements.searchInput.value.trim().toLowerCase();
@@ -1973,6 +2050,7 @@ function renderAuthShell() {
     profileId: currentSession.localProfileId || currentSession.profileId || "",
   };
   elements.sessionLabel.textContent = getSessionLabel();
+  elements.accountButton.hidden = !isSupabaseSession();
 }
 
 function renderDataSourceDebug() {
@@ -4982,6 +5060,8 @@ elements.loginRole.addEventListener("change", () => {
   renderLoginProfiles();
 });
 elements.logoutButton.addEventListener("click", handleLogout);
+elements.accountButton.addEventListener("click", openAccountDialog);
+elements.accountForm.addEventListener("submit", saveAccountPassword);
 elements.accessRole.addEventListener("change", () => {
   currentAccess = {
     role: elements.accessRole.value,

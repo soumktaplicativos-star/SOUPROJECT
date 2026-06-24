@@ -93,6 +93,22 @@ button {
   font-weight: 800;
 }
 
+.account-message {
+  border: 1px solid #fecdca;
+  border-radius: 8px;
+  background: #fffbfa;
+  color: var(--danger);
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.account-message.success {
+  border-color: #abefc6;
+  background: #f6fef9;
+  color: #027a48;
+}
+
 .topbar {
   display: flex;
   align-items: center;
