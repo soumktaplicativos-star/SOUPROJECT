@@ -170,27 +170,99 @@
     </main>
 
     <dialog id="personDialog">
-      <form method="dialog" class="modal-form" id="personForm">
+      <form method="dialog" class="modal-form wide" id="personForm">
         <div class="modal-header">
           <h2 id="personDialogTitle">Novo colaborador</h2>
           <button class="icon-button" data-close-dialog="personDialog" title="Fechar" type="button">×</button>
         </div>
         <input id="personId" type="hidden" />
+        <div class="field-grid">
+          <label>
+            Nome
+            <input id="personName" required maxlength="80" />
+          </label>
+          <label>
+            Nome de exibicao
+            <input id="personDisplayName" maxlength="80" />
+          </label>
+          <label>
+            E-mail
+            <input id="personEmail" type="email" maxlength="90" placeholder="nome@empresa.com" />
+          </label>
+          <label>
+            Telefone
+            <input id="personPhone" maxlength="24" />
+          </label>
+          <label>
+            WhatsApp
+            <input id="personWhatsapp" maxlength="24" />
+          </label>
+          <label>
+            Cidade
+            <input id="personCity" maxlength="80" />
+          </label>
+          <label>
+            Documento
+            <input id="personDocument" maxlength="32" />
+          </label>
+          <label>
+            Cargo principal
+            <input id="personRole" required maxlength="48" />
+          </label>
+          <label>
+            Funcao secundaria
+            <input id="personSecondaryRole" maxlength="48" />
+          </label>
+          <label>
+            Senioridade
+            <input id="personSeniority" maxlength="32" />
+          </label>
+          <label>
+            Setor
+            <input id="personDepartment" maxlength="48" />
+          </label>
+          <label>
+            Tipo de vinculo
+            <select id="personRelationshipType">
+              <option value="">Nao informado</option>
+              <option value="pj">PJ</option>
+              <option value="clt">CLT</option>
+              <option value="freelancer">Freelancer</option>
+              <option value="intern">Estagio</option>
+              <option value="temporary">Temporario</option>
+              <option value="partner">Parceiro</option>
+            </select>
+          </label>
+          <label>
+            Status
+            <select id="personStatus">
+              <option value="active">Ativo</option>
+              <option value="onboarding">Onboarding</option>
+              <option value="paused">Pausado</option>
+              <option value="offboarded">Desligado</option>
+              <option value="blocked">Bloqueado</option>
+            </select>
+          </label>
+          <label>
+            Data de entrada
+            <input id="personStartDate" type="date" />
+          </label>
+          <label>
+            Data de saida
+            <input id="personEndDate" type="date" />
+          </label>
+          <label>
+            Cor
+            <input id="personColor" type="color" value="#2f80ed" />
+          </label>
+        </div>
         <label>
-          Nome
-          <input id="personName" required maxlength="42" />
+          Especialidades
+          <textarea id="personSpecialties" rows="2" placeholder="Reels, Stories, Calendario editorial"></textarea>
         </label>
         <label>
-          Cargo ou area
-          <input id="personRole" required maxlength="48" />
-        </label>
-        <label>
-          E-mail
-          <input id="personEmail" type="email" maxlength="90" placeholder="nome@empresa.com" />
-        </label>
-        <label>
-          Cor
-          <input id="personColor" type="color" value="#2f80ed" />
+          Observacoes
+          <textarea id="personNotes" rows="3"></textarea>
         </label>
         <div class="modal-actions">
           <button class="ghost-button danger" id="deletePersonButton" type="button">Excluir</button>

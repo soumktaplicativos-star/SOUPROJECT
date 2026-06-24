@@ -5,6 +5,7 @@ const accessSettingsKey = "sou-access-settings-v1";
 const sessionSettingsKey = "sou-session-v1";
 const selectedViewKey = "sou-selected-view-v1";
 const phase12Debug = {
+  collaborators: "nao iniciado",
   clients: "nao iniciado",
   brands: "nao iniciado",
   contracts: "nao iniciado",
@@ -787,6 +788,9 @@ const cycleDemandTemplates = {
 
 const seedData = {
   people: peopleSeed,
+  collaboratorsSource: "local",
+  collaboratorsRemoteCount: 0,
+  deletedCollaboratorIds: [],
   clients: clientsSeed,
   deletedClientIds: [],
   brands: brandsSeed,
@@ -917,8 +921,22 @@ const elements = {
   personDialogTitle: document.querySelector("#personDialogTitle"),
   personId: document.querySelector("#personId"),
   personName: document.querySelector("#personName"),
+  personDisplayName: document.querySelector("#personDisplayName"),
   personRole: document.querySelector("#personRole"),
+  personSecondaryRole: document.querySelector("#personSecondaryRole"),
+  personSeniority: document.querySelector("#personSeniority"),
+  personDepartment: document.querySelector("#personDepartment"),
   personEmail: document.querySelector("#personEmail"),
+  personPhone: document.querySelector("#personPhone"),
+  personWhatsapp: document.querySelector("#personWhatsapp"),
+  personCity: document.querySelector("#personCity"),
+  personDocument: document.querySelector("#personDocument"),
+  personRelationshipType: document.querySelector("#personRelationshipType"),
+  personStatus: document.querySelector("#personStatus"),
+  personStartDate: document.querySelector("#personStartDate"),
+  personEndDate: document.querySelector("#personEndDate"),
+  personSpecialties: document.querySelector("#personSpecialties"),
+  personNotes: document.querySelector("#personNotes"),
   personColor: document.querySelector("#personColor"),
   deletePersonButton: document.querySelector("#deletePersonButton"),
   demandDialog: document.querySelector("#demandDialog"),
@@ -1031,6 +1049,9 @@ function loadState() {
 
     return applySeedMigrations({
       people: parsed.people.length ? parsed.people.map(normalizePerson) : peopleSeed,
+      collaboratorsSource: parsed.collaboratorsSource || "local",
+      collaboratorsRemoteCount: Number.isFinite(Number(parsed.collaboratorsRemoteCount)) ? Number(parsed.collaboratorsRemoteCount) : 0,
+      deletedCollaboratorIds: Array.isArray(parsed.deletedCollaboratorIds) ? parsed.deletedCollaboratorIds : [],
       clients: Array.isArray(parsed.clients) ? parsed.clients.map(normalizeClient) : clientsSeed,
       clientsSource: parsed.clientsSource || "local",
       deletedClientIds: Array.isArray(parsed.deletedClientIds) ? parsed.deletedClientIds : [],
@@ -1167,7 +1188,32 @@ function clearSessionSettings() {
 function normalizePerson(person) {
   return {
     ...person,
+    id: person.id || crypto.randomUUID(),
+    supabaseId: person.supabaseId || "",
+    profileId: person.profileId || person.profile_id || "",
+    name: person.name || "Colaborador sem nome",
+    displayName: person.displayName || person.display_name || "",
+    role: person.role || "Colaborador",
+    secondaryRole: person.secondaryRole || person.secondary_role || "",
+    seniority: person.seniority || "",
+    department: person.department || "",
     email: person.email || "",
+    phone: person.phone || "",
+    whatsapp: person.whatsapp || "",
+    city: person.city || "",
+    document: person.document || "",
+    specialties: Array.isArray(person.specialties)
+      ? person.specialties
+      : String(person.specialties || "")
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+    status: person.status || "active",
+    relationshipType: person.relationshipType || person.relationship_type || "",
+    startDate: person.startDate || person.start_date || "",
+    endDate: person.endDate || person.end_date || "",
+    notes: person.notes || "",
+    color: person.color || "#6961EC",
   };
 }
 
@@ -1434,12 +1480,14 @@ async function handleSupabaseLogin(email, password) {
     return;
   }
 
+  updatePhase12Debug("collaborators", "Supabase signIn: tentando");
   updatePhase12Debug("clients", "Supabase signIn: tentando");
   updatePhase12Debug("brands", "Supabase signIn: tentando");
   updatePhase12Debug("contracts", "Supabase signIn: tentando");
   const { session: authSession, user, profile, error } = await window.SOU_SUPABASE_AUTH.loginAndGetProfile({ email, password });
 
   if (error) {
+    updatePhase12Debug("collaborators", `Supabase signIn erro: ${error.message || "desconhecido"}`);
     updatePhase12Debug("clients", `Supabase signIn erro: ${error.message || "desconhecido"}`);
     updatePhase12Debug("brands", `Supabase signIn erro: ${error.message || "desconhecido"}`);
     updatePhase12Debug("contracts", `Supabase signIn erro: ${error.message || "desconhecido"}`);
@@ -1449,6 +1497,7 @@ async function handleSupabaseLogin(email, password) {
   }
 
   if (!authSession || !user?.id) {
+    updatePhase12Debug("collaborators", "Supabase session: nao");
     updatePhase12Debug("clients", "Supabase session: nao");
     updatePhase12Debug("brands", "Supabase session: nao");
     updatePhase12Debug("contracts", "Supabase session: nao");
@@ -1457,11 +1506,13 @@ async function handleSupabaseLogin(email, password) {
     return;
   }
 
+  updatePhase12Debug("collaborators", `Supabase session: sim; user: ${user.id}`);
   updatePhase12Debug("clients", `Supabase session: sim; user: ${user.id}`);
   updatePhase12Debug("brands", `Supabase session: sim; user: ${user.id}`);
   updatePhase12Debug("contracts", `Supabase session: sim; user: ${user.id}`);
 
   if (!profile) {
+    updatePhase12Debug("collaborators", "Profile encontrado: nao");
     updatePhase12Debug("clients", "Profile encontrado: nao");
     updatePhase12Debug("brands", "Profile encontrado: nao");
     updatePhase12Debug("contracts", "Profile encontrado: nao");
@@ -1471,6 +1522,7 @@ async function handleSupabaseLogin(email, password) {
     return;
   }
 
+  updatePhase12Debug("collaborators", `Profile encontrado: sim; role: ${profile.role || "sem role"}`);
   updatePhase12Debug("clients", `Profile encontrado: sim; role: ${profile.role || "sem role"}`);
   updatePhase12Debug("brands", `Profile encontrado: sim; role: ${profile.role || "sem role"}`);
   updatePhase12Debug("contracts", `Profile encontrado: sim; role: ${profile.role || "sem role"}`);
@@ -1503,6 +1555,7 @@ async function handleSupabaseLogin(email, password) {
   saveSessionSettings();
   saveAccessSettings();
   render();
+  await syncCollaboratorsFromSupabase();
   await syncClientsFromSupabase();
   await syncBrandsFromSupabase();
   await syncContractsFromSupabase();
@@ -1566,6 +1619,7 @@ function createSessionFromSupabaseProfile(profile, user = {}) {
 
 async function restoreSupabaseSession() {
   if (!window.SOU_SUPABASE_AUTH?.getCurrentAuthContext || !window.hasSouSupabaseConfig?.()) {
+    updatePhase12Debug("collaborators", "restore sem config/auth api");
     updatePhase12Debug("clients", "restore sem config/auth api");
     updatePhase12Debug("brands", "restore sem config/auth api");
     updatePhase12Debug("contracts", "restore sem config/auth api");
@@ -1575,6 +1629,7 @@ async function restoreSupabaseSession() {
   const { user, profile, error } = await window.SOU_SUPABASE_AUTH.getCurrentAuthContext();
 
   if (error) {
+    updatePhase12Debug("collaborators", `restore erro: ${error.message || "desconhecido"}`);
     updatePhase12Debug("clients", `restore erro: ${error.message || "desconhecido"}`);
     updatePhase12Debug("brands", `restore erro: ${error.message || "desconhecido"}`);
     updatePhase12Debug("contracts", `restore erro: ${error.message || "desconhecido"}`);
@@ -1589,6 +1644,7 @@ async function restoreSupabaseSession() {
       clearSessionSettings();
       saveAccessSettings();
     }
+    updatePhase12Debug("collaborators", "restore sem user Supabase");
     updatePhase12Debug("clients", "restore sem user Supabase");
     updatePhase12Debug("brands", "restore sem user Supabase");
     updatePhase12Debug("contracts", "restore sem user Supabase");
@@ -1603,6 +1659,7 @@ async function restoreSupabaseSession() {
       clearSessionSettings();
       saveAccessSettings();
     }
+    updatePhase12Debug("collaborators", "restore sem profile Supabase");
     updatePhase12Debug("clients", "restore sem profile Supabase");
     updatePhase12Debug("brands", "restore sem profile Supabase");
     updatePhase12Debug("contracts", "restore sem profile Supabase");
@@ -1641,6 +1698,7 @@ async function restoreSupabaseSession() {
   saveSessionSettings();
   saveAccessSettings();
   render();
+  await syncCollaboratorsFromSupabase();
   await syncClientsFromSupabase();
   await syncBrandsFromSupabase();
   await syncContractsFromSupabase();
@@ -1813,7 +1871,8 @@ function renderDataSourceDebug() {
   if (!elements.dataSourceDebug) return;
   // TODO remove debug after Phase 1.2.
   // TODO remove debug after contracts phase.
-  elements.dataSourceDebug.textContent = `Session: ${currentSession.authProvider || "local"} | Clients source: ${formatDataSource(state.clientsSource)} (${state.clients?.length || 0}) | Brands source: ${formatDataSource(state.brandsSource)} (${state.brands?.length || 0}) | Contracts source: ${formatDataSource(state.contractsSource)} (${state.contracts?.length || 0}) | Clients sync: ${phase12Debug.clients} | Brands sync: ${phase12Debug.brands} | Contracts sync: ${phase12Debug.contracts}`;
+  const collaboratorsCount = state.collaboratorsSource === "supabase" ? state.collaboratorsRemoteCount || 0 : state.people?.length || 0;
+  elements.dataSourceDebug.textContent = `Session: ${currentSession.authProvider || "local"} | Collaborators source: ${formatDataSource(state.collaboratorsSource)} (${collaboratorsCount}) | Clients source: ${formatDataSource(state.clientsSource)} (${state.clients?.length || 0}) | Brands source: ${formatDataSource(state.brandsSource)} (${state.brands?.length || 0}) | Contracts source: ${formatDataSource(state.contractsSource)} (${state.contracts?.length || 0}) | Collaborators sync: ${phase12Debug.collaborators} | Clients sync: ${phase12Debug.clients} | Brands sync: ${phase12Debug.brands} | Contracts sync: ${phase12Debug.contracts}`;
 }
 
 function updatePhase12Debug(area, message) {
@@ -1953,11 +2012,12 @@ function renderPeople() {
 
 function personButtonTemplate(person, count) {
   const active = selectedPersonId === person.id ? " active" : "";
+  const displayName = person.displayName || person.name;
   return `
     <button class="person-row${active}" type="button" data-id="${person.id}">
       <span class="person-dot" style="background:${person.color}"></span>
       <span>
-        <span class="person-name">${escapeHtml(person.name)}</span>
+        <span class="person-name">${escapeHtml(displayName)}</span>
         <span class="person-role">${escapeHtml(person.role)}</span>
       </span>
       <span class="person-count">${count}</span>
@@ -1966,7 +2026,7 @@ function personButtonTemplate(person, count) {
 }
 
 function renderOwnerOptions() {
-  const options = state.people.map((person) => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
+  const options = state.people.map((person) => `<option value="${person.id}">${escapeHtml(person.displayName || person.name)}</option>`).join("");
   const clientOptions = state.clients
     .map((client) => `<option value="${client.id}">${escapeHtml(client.name)}</option>`)
     .join("");
@@ -2605,8 +2665,22 @@ function openPersonDialog(personId = "") {
   elements.personForm.reset();
   elements.personId.value = person?.id || "";
   elements.personName.value = person?.name || "";
+  elements.personDisplayName.value = person?.displayName || "";
   elements.personRole.value = person?.role || "";
+  elements.personSecondaryRole.value = person?.secondaryRole || "";
+  elements.personSeniority.value = person?.seniority || "";
+  elements.personDepartment.value = person?.department || "";
   elements.personEmail.value = person?.email || "";
+  elements.personPhone.value = person?.phone || "";
+  elements.personWhatsapp.value = person?.whatsapp || "";
+  elements.personCity.value = person?.city || "";
+  elements.personDocument.value = person?.document || "";
+  elements.personRelationshipType.value = person?.relationshipType || "";
+  elements.personStatus.value = person?.status || "active";
+  elements.personStartDate.value = person?.startDate || "";
+  elements.personEndDate.value = person?.endDate || "";
+  elements.personSpecialties.value = (person?.specialties || []).join(", ");
+  elements.personNotes.value = person?.notes || "";
   elements.personColor.value = person?.color || "#2f80ed";
   elements.personDialogTitle.textContent = person ? "Editar colaborador" : "Novo colaborador";
   elements.deletePersonButton.hidden = !person;
@@ -2887,6 +2961,142 @@ function clientDemandRowTemplate(demand) {
 
 function getPriorityClass(priority) {
   return priority === "Alta" ? "high" : priority === "Baixa" ? "low" : "medium";
+}
+
+function canUseSupabaseCollaborators() {
+  return Boolean(window.supabase?.createClient && window.hasSouSupabaseConfig?.());
+}
+
+function mapSupabaseCollaboratorToLocalPerson(row) {
+  return normalizePerson({
+    id: row.id,
+    supabaseId: row.id,
+    profileId: row.profile_id,
+    name: row.name,
+    displayName: row.display_name || "",
+    role: row.role || row.secondary_role || "Colaborador",
+    secondaryRole: row.secondary_role || "",
+    seniority: row.seniority || "",
+    department: row.department || "",
+    email: row.email,
+    phone: row.phone || "",
+    whatsapp: row.whatsapp || "",
+    city: row.city || "",
+    document: row.document || "",
+    specialties: row.specialties || [],
+    status: row.status,
+    relationshipType: row.relationship_type,
+    startDate: row.start_date || "",
+    endDate: row.end_date || "",
+    notes: row.notes,
+    color: "#6961EC",
+  });
+}
+
+function mapLocalPersonToSupabaseCollaboratorPayload(person) {
+  return {
+    profile_id: person.profileId || null,
+    name: person.name,
+    display_name: person.displayName || null,
+    email: person.email || null,
+    phone: person.phone || null,
+    whatsapp: person.whatsapp || null,
+    role: person.role || null,
+    secondary_role: person.secondaryRole || null,
+    seniority: person.seniority || null,
+    department: person.department || null,
+    city: person.city || null,
+    document: person.document || null,
+    status: person.status || "active",
+    relationship_type: person.relationshipType || null,
+    specialties: Array.isArray(person.specialties) ? person.specialties : [],
+    start_date: person.startDate || null,
+    end_date: person.endDate || null,
+    notes: person.notes || null,
+  };
+}
+
+async function loadSupabaseCollaborators() {
+  if (!canUseSupabaseCollaborators()) return [];
+  const client = getSupabaseClientInstance();
+  const { data, error } = await client.from("collaborators").select("*").order("name", { ascending: true });
+
+  if (error) throw error;
+  // TODO remove debug after collaborators phase.
+  console.log("[SOU Debug Collaborators] collaborators loaded from Supabase", { count: data?.length || 0 });
+  return (data || []).map(mapSupabaseCollaboratorToLocalPerson);
+}
+
+async function saveCollaboratorToSupabase(personData) {
+  if (!canUseSupabaseCollaborators()) return null;
+  const client = getSupabaseClientInstance();
+  const payload = mapLocalPersonToSupabaseCollaboratorPayload(personData);
+  // TODO remove debug after collaborators phase.
+  console.log("[SOU Debug Collaborators] collaborator save attempt", {
+    mode: personData.supabaseId ? "update" : "insert",
+    payload,
+  });
+
+  const query = personData.supabaseId
+    ? client.from("collaborators").update(payload).eq("id", personData.supabaseId).select("*").single()
+    : client.from("collaborators").insert(payload).select("*").single();
+  const { data, error } = await query;
+
+  if (error) {
+    updatePhase12Debug("collaborators", `erro ao salvar colaborador: ${error.message || "desconhecido"}`);
+    throw error;
+  }
+
+  updatePhase12Debug("collaborators", `colaborador salvo no Supabase: ${data.id}`);
+  return mapSupabaseCollaboratorToLocalPerson(data);
+}
+
+async function deleteCollaboratorFromSupabase(personData) {
+  if (!canUseSupabaseCollaborators() || !personData?.supabaseId) return;
+  const client = getSupabaseClientInstance();
+  // TODO remove debug after collaborators phase.
+  console.log("[SOU Debug Collaborators] collaborator delete attempt", { id: personData.supabaseId });
+  const { error } = await client.from("collaborators").delete().eq("id", personData.supabaseId);
+
+  if (error) {
+    updatePhase12Debug("collaborators", `erro ao excluir colaborador: ${error.message || "desconhecido"}`);
+    throw error;
+  }
+
+  updatePhase12Debug("collaborators", `colaborador excluido no Supabase: ${personData.supabaseId}`);
+}
+
+async function syncCollaboratorsFromSupabase() {
+  try {
+    if (!canUseSupabaseCollaborators() || !window.SOU_SUPABASE_AUTH?.getCurrentSession) {
+      updatePhase12Debug("collaborators", "sem config/auth api");
+      return;
+    }
+    const { session } = await window.SOU_SUPABASE_AUTH.getCurrentSession();
+    if (!session) {
+      updatePhase12Debug("collaborators", "sem sessao Supabase");
+      return;
+    }
+
+    const remoteCollaborators = await loadSupabaseCollaborators();
+    state.collaboratorsSource = "supabase";
+    state.collaboratorsRemoteCount = remoteCollaborators.length;
+    if (!remoteCollaborators.length) {
+      updatePhase12Debug("collaborators", "ok: 0 colaboradores no Supabase; people legado preservado");
+      saveState();
+      renderDataSourceDebug();
+      return;
+    }
+
+    state.people = remoteCollaborators.map(normalizePerson);
+    state.deletedCollaboratorIds = [];
+    updatePhase12Debug("collaborators", `ok: ${state.people.length} colaboradores`);
+    saveState();
+    render();
+  } catch (error) {
+    updatePhase12Debug("collaborators", `erro: ${error.message || "desconhecido"}`);
+    console.log("[SOU Supabase Collaborators] usando colaboradores locais como fallback", error);
+  }
 }
 
 function canUseSupabaseClients() {
@@ -3389,18 +3599,60 @@ function openProcessDialog(processId = "") {
   elements.processDialog.showModal();
 }
 
-function savePerson(event) {
+async function savePerson(event) {
   event.preventDefault();
   if (!isAdminAccess()) return;
-  const person = {
+  const currentPerson = getOwner(elements.personId.value);
+  const person = normalizePerson({
     id: elements.personId.value || crypto.randomUUID(),
+    supabaseId: currentPerson?.supabaseId || "",
+    profileId: currentPerson?.profileId || "",
     name: elements.personName.value.trim(),
+    displayName: elements.personDisplayName.value.trim(),
     role: elements.personRole.value.trim(),
+    secondaryRole: elements.personSecondaryRole.value.trim(),
+    seniority: elements.personSeniority.value.trim(),
+    department: elements.personDepartment.value.trim(),
     email: elements.personEmail.value.trim(),
+    phone: elements.personPhone.value.trim(),
+    whatsapp: elements.personWhatsapp.value.trim(),
+    city: elements.personCity.value.trim(),
+    document: elements.personDocument.value.trim(),
+    relationshipType: elements.personRelationshipType.value,
+    status: elements.personStatus.value || "active",
+    startDate: elements.personStartDate.value,
+    endDate: elements.personEndDate.value,
+    specialties: elements.personSpecialties.value
+      .split(/,|\n/)
+      .map((item) => item.trim())
+      .filter(Boolean),
+    notes: elements.personNotes.value.trim(),
     color: elements.personColor.value,
-  };
+  });
 
   if (!person.name || !person.role) return;
+
+  if ((state.collaboratorsSource === "supabase" || currentSession.authProvider === "supabase") && canUseSupabaseCollaborators()) {
+    try {
+      const savedPerson = await saveCollaboratorToSupabase(person);
+      if (savedPerson) {
+        const index = state.people.findIndex((item) => item.id === person.id || item.supabaseId === savedPerson.supabaseId);
+        if (index >= 0) state.people[index] = savedPerson;
+        else state.people.push(savedPerson);
+
+        state.collaboratorsSource = "supabase";
+        selectedPersonId = savedPerson.id;
+        elements.personDialog.close();
+        await syncCollaboratorsFromSupabase();
+        render();
+        return;
+      }
+    } catch (error) {
+      // TODO remove debug after collaborators phase.
+      console.error("[SOU Ops] Falha ao salvar colaborador no Supabase. Mantendo fallback local.", error);
+      updatePhase12Debug("collaborators", `save erro: ${error.message || "falha desconhecida"}`);
+    }
+  }
 
   const index = state.people.findIndex((item) => item.id === person.id);
   if (index >= 0) state.people[index] = person;
@@ -3414,18 +3666,38 @@ function savePerson(event) {
   render();
 }
 
-function deletePerson() {
+async function deletePerson() {
   if (!isAdminAccess()) return;
   const personId = elements.personId.value;
   if (!personId) return;
 
+  const person = getOwner(personId);
   const hasDemands = state.demands.some((demand) => demand.ownerId === personId);
   const hasProcesses = state.processes.some((process) => process.ownerId === personId);
-  if ((hasDemands || hasProcesses) && !confirm("Este colaborador tem demandas/processos. Excluir tambem esses itens?")) return;
+  if (hasDemands || hasProcesses) {
+    alert("Este colaborador possui demandas/processos vinculados. Nesta fase, a exclusao nao altera demandas. Reatribua antes de excluir.");
+    return;
+  }
+
+  if ((state.collaboratorsSource === "supabase" || person?.supabaseId) && canUseSupabaseCollaborators()) {
+    try {
+      await deleteCollaboratorFromSupabase(person);
+      state.people = state.people.filter((item) => item.id !== personId && item.supabaseId !== person?.supabaseId);
+      state.roles = state.roles.filter((role) => role.personId !== personId);
+      selectedPersonId = "todos";
+      elements.personDialog.close();
+      await syncCollaboratorsFromSupabase();
+      render();
+      return;
+    } catch (error) {
+      // TODO remove debug after collaborators phase.
+      console.error("[SOU Ops] Falha ao excluir colaborador no Supabase. Mantendo registro local.", error);
+      updatePhase12Debug("collaborators", `delete erro: ${error.message || "falha desconhecida"}`);
+      return;
+    }
+  }
 
   state.people = state.people.filter((person) => person.id !== personId);
-  state.demands = state.demands.filter((demand) => demand.ownerId !== personId);
-  state.processes = state.processes.filter((process) => process.ownerId !== personId);
   state.roles = state.roles.filter((role) => role.personId !== personId);
   selectedPersonId = "todos";
   elements.personDialog.close();
