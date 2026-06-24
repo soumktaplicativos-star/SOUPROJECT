@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SOU Demandas</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260624-modal-layout" />
   </head>
   <body>
     <section class="login-screen" id="loginScreen">
@@ -120,7 +120,7 @@
           </label>
           <label>
             Busca
-            <input id="searchInput" type="search" placeholder="Cliente, tarefa ou responsavel" />
+            <input id="searchInput" type="search" placeholder="Cliente, tarefa ou responsável" />
           </label>
         </section>
       </aside>
@@ -128,7 +128,7 @@
       <section class="workspace">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Operacao da agencia</p>
+            <p class="eyebrow">Operação da agência</p>
             <h2 id="pageHeadline">Dashboard</h2>
           </div>
           <div class="command-center">
@@ -169,7 +169,7 @@
       </section>
     </main>
 
-    <dialog class="person-dialog" id="personDialog">
+    <dialog class="wide-dialog person-dialog" id="personDialog">
       <form method="dialog" class="modal-form wide person-form" id="personForm">
         <div class="modal-header">
           <h2 id="personDialogTitle">Novo colaborador</h2>
@@ -280,6 +280,35 @@
             <textarea id="personNotes" rows="5"></textarea>
           </label>
         </section>
+        <section class="client-demand-panel">
+          <div class="panel-header compact">
+            <h3>Marcas atribuídas</h3>
+          </div>
+          <div class="field-grid">
+            <label>
+              Marca
+              <select id="personAssignmentBrand"></select>
+            </label>
+            <label>
+              Função na marca
+              <input id="personAssignmentRole" maxlength="80" placeholder="Social Media" />
+            </label>
+            <label>
+              Status
+              <select id="personAssignmentStatus">
+                <option value="active">Ativo</option>
+                <option value="paused">Pausado</option>
+                <option value="ended">Encerrado</option>
+              </select>
+            </label>
+            <label class="checkbox-line">
+              <input id="personAssignmentIsPrimary" type="checkbox" />
+              Principal
+            </label>
+          </div>
+          <button class="ghost-button" id="savePersonBrandAssignmentButton" type="button">Vincular marca</button>
+          <div class="client-demand-list" id="personBrandAssignmentList"></div>
+        </section>
         <div class="modal-actions">
           <button class="ghost-button danger" id="deletePersonButton" type="button">Excluir</button>
           <button class="ghost-button" data-close-dialog="personDialog" type="button">Cancelar</button>
@@ -288,7 +317,7 @@
       </form>
     </dialog>
 
-    <dialog id="demandDialog">
+    <dialog class="wide-dialog" id="demandDialog">
       <form method="dialog" class="modal-form wide" id="demandForm">
         <div class="modal-header">
           <h2 id="demandDialogTitle">Nova demanda</h2>
@@ -297,7 +326,7 @@
         <input id="demandId" type="hidden" />
         <div class="field-grid">
           <label>
-            Titulo
+            Título
             <input id="demandTitle" required maxlength="80" />
           </label>
           <label>
@@ -305,7 +334,7 @@
             <select id="demandClient" required></select>
           </label>
           <label>
-            Responsavel
+            Responsável
             <select id="demandOwner" required></select>
           </label>
           <label>
@@ -411,7 +440,7 @@
       </form>
     </dialog>
 
-    <dialog id="processDialog">
+    <dialog class="wide-dialog" id="processDialog">
       <form method="dialog" class="modal-form wide" id="processForm">
         <div class="modal-header">
           <h2 id="processDialogTitle">Novo processo</h2>
@@ -428,7 +457,7 @@
             <input id="processArea" required maxlength="50" />
           </label>
           <label>
-            Responsavel
+            Responsável
             <select id="processOwner"></select>
           </label>
           <label>
@@ -456,7 +485,7 @@
       </form>
     </dialog>
 
-    <dialog id="roleDialog">
+    <dialog class="wide-dialog" id="roleDialog">
       <form method="dialog" class="modal-form wide" id="roleForm">
         <div class="modal-header">
           <h2 id="roleDialogTitle">Editar função</h2>
@@ -488,7 +517,7 @@
       </form>
     </dialog>
 
-    <dialog id="clientDialog">
+    <dialog class="wide-dialog" id="clientDialog">
       <form method="dialog" class="modal-form wide" id="clientForm">
         <div class="modal-header">
           <h2 id="clientDialogTitle">Novo cliente</h2>
@@ -511,11 +540,11 @@
             </select>
           </label>
           <label>
-            Responsavel principal
+            Responsável principal
             <select id="clientOwner"></select>
           </label>
           <label>
-            Juridico/financeiro
+            Jurídico/financeiro
             <select id="clientFinanceStatus">
               <option>Regular</option>
               <option>Pendente</option>
@@ -526,8 +555,8 @@
           </label>
         </div>
         <label>
-          Servicos contratados
-          <textarea id="clientServices" rows="4" placeholder="Um servico por linha"></textarea>
+          Serviços contratados
+          <textarea id="clientServices" rows="4" placeholder="Um serviço por linha"></textarea>
         </label>
         <label>
           Observações
@@ -557,7 +586,7 @@
       </form>
     </dialog>
 
-    <dialog id="brandDialog">
+    <dialog class="wide-dialog" id="brandDialog">
       <form method="dialog" class="modal-form wide" id="brandForm">
         <div class="modal-header">
           <h2 id="brandDialogTitle">Nova marca</h2>
@@ -602,6 +631,35 @@
           </div>
           <div class="client-demand-list" id="brandContractList"></div>
         </section>
+        <section class="client-demand-panel">
+          <div class="panel-header compact">
+            <h3>Colaboradores atribuídos</h3>
+          </div>
+          <div class="field-grid">
+            <label>
+              Colaborador
+              <select id="brandAssignmentCollaborator"></select>
+            </label>
+            <label>
+              Função na marca
+              <input id="brandAssignmentRole" maxlength="80" placeholder="Social Media" />
+            </label>
+            <label>
+              Status
+              <select id="brandAssignmentStatus">
+                <option value="active">Ativo</option>
+                <option value="paused">Pausado</option>
+                <option value="ended">Encerrado</option>
+              </select>
+            </label>
+            <label class="checkbox-line">
+              <input id="brandAssignmentIsPrimary" type="checkbox" />
+              Principal
+            </label>
+          </div>
+          <button class="ghost-button" id="saveBrandCollaboratorAssignmentButton" type="button">Vincular colaborador</button>
+          <div class="client-demand-list" id="brandCollaboratorAssignmentList"></div>
+        </section>
         <div class="modal-actions">
           <button class="ghost-button danger" id="deleteBrandButton" type="button">Excluir</button>
           <button class="primary-button" value="default" type="submit">Salvar</button>
@@ -609,7 +667,7 @@
       </form>
     </dialog>
 
-    <dialog id="contractDialog">
+    <dialog class="wide-dialog" id="contractDialog">
       <form method="dialog" class="modal-form wide" id="contractForm">
         <div class="modal-header">
           <h2 id="contractDialogTitle">Novo contrato</h2>
@@ -653,8 +711,8 @@
           <div class="checklist-options" id="contractBrands"></div>
         </label>
         <label>
-          Servicos contratados
-          <textarea id="contractServices" rows="3" maxlength="700" placeholder="Um servico por linha"></textarea>
+          Serviços contratados
+          <textarea id="contractServices" rows="3" maxlength="700" placeholder="Um serviço por linha"></textarea>
         </label>
         <label>
           Escopo
@@ -675,7 +733,7 @@
       </form>
     </dialog>
 
-    <dialog id="cycleDialog">
+    <dialog class="wide-dialog" id="cycleDialog">
       <form method="dialog" class="modal-form wide" id="cycleForm">
         <div class="modal-header">
           <h2>Gerar demandas por ciclo</h2>
@@ -727,7 +785,7 @@
       </form>
     </dialog>
 
-    <dialog id="calendarDialog">
+    <dialog class="wide-dialog" id="calendarDialog">
       <form method="dialog" class="modal-form wide" id="calendarForm">
         <div class="modal-header">
           <h2>Conectar Google Agenda</h2>

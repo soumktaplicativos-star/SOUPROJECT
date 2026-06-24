@@ -6,6 +6,7 @@ const sessionSettingsKey = "sou-session-v1";
 const selectedViewKey = "sou-selected-view-v1";
 const phase12Debug = {
   collaborators: "nao iniciado",
+  collaboratorBrandAssignments: "nao iniciado",
   clients: "nao iniciado",
   brands: "nao iniciado",
   contracts: "nao iniciado",
@@ -791,6 +792,8 @@ const seedData = {
   legacyPeople: peopleSeed,
   collaboratorsSource: "local",
   collaboratorsRemoteCount: 0,
+  collaboratorBrandAssignments: [],
+  collaboratorBrandAssignmentsSource: "local",
   deletedCollaboratorIds: [],
   clients: clientsSeed,
   deletedClientIds: [],
@@ -939,6 +942,12 @@ const elements = {
   personSpecialties: document.querySelector("#personSpecialties"),
   personNotes: document.querySelector("#personNotes"),
   personColor: document.querySelector("#personColor"),
+  personAssignmentBrand: document.querySelector("#personAssignmentBrand"),
+  personAssignmentRole: document.querySelector("#personAssignmentRole"),
+  personAssignmentStatus: document.querySelector("#personAssignmentStatus"),
+  personAssignmentIsPrimary: document.querySelector("#personAssignmentIsPrimary"),
+  savePersonBrandAssignmentButton: document.querySelector("#savePersonBrandAssignmentButton"),
+  personBrandAssignmentList: document.querySelector("#personBrandAssignmentList"),
   savePersonButton: document.querySelector("#savePersonButton"),
   deletePersonButton: document.querySelector("#deletePersonButton"),
   demandDialog: document.querySelector("#demandDialog"),
@@ -1013,6 +1022,12 @@ const elements = {
   brandNotesInternal: document.querySelector("#brandNotesInternal"),
   brandNotesClient: document.querySelector("#brandNotesClient"),
   brandContractList: document.querySelector("#brandContractList"),
+  brandAssignmentCollaborator: document.querySelector("#brandAssignmentCollaborator"),
+  brandAssignmentRole: document.querySelector("#brandAssignmentRole"),
+  brandAssignmentStatus: document.querySelector("#brandAssignmentStatus"),
+  brandAssignmentIsPrimary: document.querySelector("#brandAssignmentIsPrimary"),
+  saveBrandCollaboratorAssignmentButton: document.querySelector("#saveBrandCollaboratorAssignmentButton"),
+  brandCollaboratorAssignmentList: document.querySelector("#brandCollaboratorAssignmentList"),
   deleteBrandButton: document.querySelector("#deleteBrandButton"),
   contractDialog: document.querySelector("#contractDialog"),
   contractForm: document.querySelector("#contractForm"),
@@ -1059,6 +1074,10 @@ function loadState() {
             : peopleSeed,
       collaboratorsSource: parsed.collaboratorsSource || "local",
       collaboratorsRemoteCount: Number.isFinite(Number(parsed.collaboratorsRemoteCount)) ? Number(parsed.collaboratorsRemoteCount) : 0,
+      collaboratorBrandAssignments: Array.isArray(parsed.collaboratorBrandAssignments)
+        ? parsed.collaboratorBrandAssignments.map(normalizeCollaboratorBrandAssignment)
+        : [],
+      collaboratorBrandAssignmentsSource: parsed.collaboratorBrandAssignmentsSource || "local",
       deletedCollaboratorIds: Array.isArray(parsed.deletedCollaboratorIds) ? parsed.deletedCollaboratorIds : [],
       clients: Array.isArray(parsed.clients) ? parsed.clients.map(normalizeClient) : clientsSeed,
       clientsSource: parsed.clientsSource || "local",
@@ -1225,6 +1244,22 @@ function normalizePerson(person) {
   };
 }
 
+function normalizeCollaboratorBrandAssignment(assignment) {
+  return {
+    id: assignment.id || crypto.randomUUID(),
+    collaboratorId: assignment.collaboratorId || assignment.collaborator_id || "",
+    brandId: assignment.brandId || assignment.brand_id || "",
+    roleOnBrand: assignment.roleOnBrand || assignment.role_on_brand || "",
+    isPrimary: Boolean(assignment.isPrimary ?? assignment.is_primary),
+    status: assignment.status || "active",
+    startDate: assignment.startDate || assignment.start_date || "",
+    endDate: assignment.endDate || assignment.end_date || "",
+    notes: assignment.notes || "",
+    createdAt: assignment.createdAt || assignment.created_at || "",
+    updatedAt: assignment.updatedAt || assignment.updated_at || "",
+  };
+}
+
 function parsePersonDateInput(value) {
   const cleanValue = String(value || "").trim();
   if (!cleanValue) return "";
@@ -1362,6 +1397,24 @@ function getOwner(ownerId) {
   return state.people.find((person) => person.id === ownerId);
 }
 
+function getCollaboratorBySupabaseId(collaboratorId) {
+  return state.people.find((person) => person.supabaseId === collaboratorId || person.id === collaboratorId);
+}
+
+function getCollaboratorBrandAssignmentsByCollaborator(personId) {
+  const person = getOwner(personId);
+  if (!person?.supabaseId) return [];
+  return (state.collaboratorBrandAssignments || []).filter((assignment) => assignment.collaboratorId === person.supabaseId);
+}
+
+function getCollaboratorBrandAssignmentsByBrand(brandId) {
+  return (state.collaboratorBrandAssignments || []).filter((assignment) => assignment.brandId === brandId);
+}
+
+function getSupabaseCollaborators() {
+  return state.people.filter((person) => person.supabaseId);
+}
+
 function getClient(clientId) {
   return state.clients?.find((client) => client.id === clientId);
 }
@@ -1373,6 +1426,11 @@ function getClientSupabaseId(clientId) {
 
 function getBrand(brandId) {
   return state.brands?.find((brand) => brand.id === brandId);
+}
+
+function getBrandSupabaseId(brandId) {
+  const brand = getBrand(brandId);
+  return brand?.supabaseId || brand?.id || "";
 }
 
 function getContract(contractId) {
@@ -1606,6 +1664,7 @@ async function handleSupabaseLogin(email, password) {
   await syncCollaboratorsFromSupabase();
   await syncClientsFromSupabase();
   await syncBrandsFromSupabase();
+  await syncCollaboratorBrandAssignmentsFromSupabase();
   await syncContractsFromSupabase();
 }
 
@@ -1749,6 +1808,7 @@ async function restoreSupabaseSession() {
   await syncCollaboratorsFromSupabase();
   await syncClientsFromSupabase();
   await syncBrandsFromSupabase();
+  await syncCollaboratorBrandAssignmentsFromSupabase();
   await syncContractsFromSupabase();
 }
 
@@ -1920,7 +1980,7 @@ function renderDataSourceDebug() {
   // TODO remove debug after Phase 1.2.
   // TODO remove debug after contracts phase.
   const collaboratorsCount = state.collaboratorsSource === "supabase" ? state.collaboratorsRemoteCount || 0 : state.people?.length || 0;
-  elements.dataSourceDebug.textContent = `Session: ${currentSession.authProvider || "local"} | Collaborators source: ${formatDataSource(state.collaboratorsSource)} (${collaboratorsCount}) | Clients source: ${formatDataSource(state.clientsSource)} (${state.clients?.length || 0}) | Brands source: ${formatDataSource(state.brandsSource)} (${state.brands?.length || 0}) | Contracts source: ${formatDataSource(state.contractsSource)} (${state.contracts?.length || 0}) | Collaborators sync: ${phase12Debug.collaborators} | Clients sync: ${phase12Debug.clients} | Brands sync: ${phase12Debug.brands} | Contracts sync: ${phase12Debug.contracts}`;
+  elements.dataSourceDebug.textContent = `Session: ${currentSession.authProvider || "local"} | Collaborators source: ${formatDataSource(state.collaboratorsSource)} (${collaboratorsCount}) | Assignments source: ${formatDataSource(state.collaboratorBrandAssignmentsSource)} (${state.collaboratorBrandAssignments?.length || 0}) | Clients source: ${formatDataSource(state.clientsSource)} (${state.clients?.length || 0}) | Brands source: ${formatDataSource(state.brandsSource)} (${state.brands?.length || 0}) | Contracts source: ${formatDataSource(state.contractsSource)} (${state.contracts?.length || 0}) | Collaborators sync: ${phase12Debug.collaborators} | Assignments sync: ${phase12Debug.collaboratorBrandAssignments} | Clients sync: ${phase12Debug.clients} | Brands sync: ${phase12Debug.brands} | Contracts sync: ${phase12Debug.contracts}`;
 }
 
 function updatePhase12Debug(area, message) {
@@ -2745,6 +2805,8 @@ function openPersonDialog(personId = "") {
   elements.personSpecialties.value = (person?.specialties || []).join(", ");
   elements.personNotes.value = person?.notes || "";
   elements.personColor.value = person?.color || "#2f80ed";
+  renderPersonAssignmentControls(person?.id || "");
+  renderPersonBrandAssignmentList(person?.id || "");
   elements.personDialogTitle.textContent = person ? "Editar colaborador" : "Novo colaborador";
   elements.deletePersonButton.hidden = !person;
   elements.personDialog.showModal();
@@ -2822,6 +2884,8 @@ function openBrandDialog(brandId = "") {
   elements.brandNotesInternal.value = brand?.notesInternal || "";
   elements.brandNotesClient.value = brand?.notesClient || "";
   renderBrandContractList(brand?.id || "");
+  renderBrandAssignmentControls(brand?.id || "");
+  renderBrandCollaboratorAssignmentList(brand?.id || "");
   elements.brandDialogTitle.textContent = brand ? "Editar marca" : "Nova marca";
   setBrandDialogAccess(Boolean(brand));
   elements.brandDialog.showModal();
@@ -2982,12 +3046,133 @@ function brandContractRowTemplate(contract) {
     <div class="client-demand-row">
       <span>
         <strong>${escapeHtml(contract.name)}</strong>
-        <small>${escapeHtml(client?.name || "Cliente nao vinculado")} - ${escapeHtml(services)}</small>
+        <small>${escapeHtml(client?.name || "Cliente não vinculado")} - ${escapeHtml(services)}</small>
       </span>
       <span class="tag ${statusClass}">${escapeHtml(statusLabel)}</span>
       <span class="tag">${formatCurrency(contract.monthlyValue)}</span>
     </div>
   `;
+}
+
+function getAssignmentStatusLabel(status) {
+  const labels = {
+    active: "Ativo",
+    paused: "Pausado",
+    ended: "Encerrado",
+  };
+  return labels[status] || status || "Sem status";
+}
+
+function renderPersonAssignmentControls(personId) {
+  if (!elements.personAssignmentBrand || !elements.savePersonBrandAssignmentButton) return;
+  const person = getOwner(personId);
+  const eligibleBrands = state.brands.filter((brand) => brand.supabaseId || /^[0-9a-f-]{36}$/i.test(brand.id));
+  elements.personAssignmentBrand.innerHTML = eligibleBrands.length
+    ? eligibleBrands
+        .map((brand) => {
+          const client = getClient(brand.clientId);
+          return `<option value="${brand.id}">${escapeHtml(brand.name)}${client?.name ? ` - ${escapeHtml(client.name)}` : ""}</option>`;
+        })
+        .join("")
+    : `<option value="">Nenhuma marca Supabase disponível</option>`;
+  elements.personAssignmentRole.value = "";
+  elements.personAssignmentStatus.value = "active";
+  elements.personAssignmentIsPrimary.checked = false;
+  elements.savePersonBrandAssignmentButton.disabled = !person?.supabaseId || !eligibleBrands.length || !isAdminAccess();
+}
+
+function renderBrandAssignmentControls(brandId) {
+  if (!elements.brandAssignmentCollaborator || !elements.saveBrandCollaboratorAssignmentButton) return;
+  const brand = getBrand(brandId);
+  const collaborators = getSupabaseCollaborators();
+  elements.brandAssignmentCollaborator.innerHTML = collaborators.length
+    ? collaborators
+        .map((person) => `<option value="${person.id}">${escapeHtml(person.displayName || person.name)}</option>`)
+        .join("")
+    : `<option value="">Nenhum colaborador Supabase disponível</option>`;
+  elements.brandAssignmentRole.value = "";
+  elements.brandAssignmentStatus.value = "active";
+  elements.brandAssignmentIsPrimary.checked = false;
+  elements.saveBrandCollaboratorAssignmentButton.disabled = !brand?.supabaseId || !collaborators.length || !isAdminAccess();
+}
+
+function collaboratorBrandAssignmentRowTemplate(assignment) {
+  const brand = getBrand(assignment.brandId);
+  const client = getClient(brand?.clientId);
+  const primaryLabel = assignment.isPrimary ? "Principal" : "Apoio";
+
+  return `
+    <div class="client-demand-row">
+      <span>
+        <strong>${escapeHtml(brand?.name || "Marca não encontrada")}</strong>
+        <small>${escapeHtml(client?.name || "Cliente não vinculado")} - ${escapeHtml(assignment.roleOnBrand || "Função não definida")}</small>
+      </span>
+      <span class="tag">${escapeHtml(primaryLabel)}</span>
+      <span class="tag">${escapeHtml(getAssignmentStatusLabel(assignment.status))}</span>
+      <button class="ghost-button compact" type="button" data-delete-assignment="${assignment.id}">Remover</button>
+    </div>
+  `;
+}
+
+function brandCollaboratorAssignmentRowTemplate(assignment) {
+  const collaborator = getCollaboratorBySupabaseId(assignment.collaboratorId);
+  const primaryLabel = assignment.isPrimary ? "Principal" : "Apoio";
+
+  return `
+    <div class="client-demand-row">
+      <span>
+        <strong>${escapeHtml(collaborator?.displayName || collaborator?.name || "Colaborador não encontrado")}</strong>
+        <small>${escapeHtml(assignment.roleOnBrand || "Função não definida")}</small>
+      </span>
+      <span class="tag">${escapeHtml(primaryLabel)}</span>
+      <span class="tag">${escapeHtml(getAssignmentStatusLabel(assignment.status))}</span>
+      <button class="ghost-button compact" type="button" data-delete-assignment="${assignment.id}">Remover</button>
+    </div>
+  `;
+}
+
+function renderPersonBrandAssignmentList(personId) {
+  if (!elements.personBrandAssignmentList) return;
+  const person = getOwner(personId);
+
+  if (!personId) {
+    elements.personBrandAssignmentList.innerHTML = `<div class="empty-state compact">Salve o colaborador para atribuir marcas.</div>`;
+    return;
+  }
+
+  if (!person?.supabaseId) {
+    elements.personBrandAssignmentList.innerHTML = `<div class="empty-state compact">Colaborador legado. Vínculos por marca ficam disponíveis após cadastro no Supabase.</div>`;
+    return;
+  }
+
+  const assignments = getCollaboratorBrandAssignmentsByCollaborator(personId);
+  elements.personBrandAssignmentList.innerHTML = assignments.length
+    ? assignments.map(collaboratorBrandAssignmentRowTemplate).join("")
+    : `<div class="empty-state compact">Nenhuma marca atribuída.</div>`;
+  bindAssignmentDeleteButtons(elements.personBrandAssignmentList);
+}
+
+function renderBrandCollaboratorAssignmentList(brandId) {
+  if (!elements.brandCollaboratorAssignmentList) return;
+
+  if (!brandId) {
+    elements.brandCollaboratorAssignmentList.innerHTML = `<div class="empty-state compact">Salve a marca para atribuir colaboradores.</div>`;
+    return;
+  }
+
+  const assignments = getCollaboratorBrandAssignmentsByBrand(brandId);
+  elements.brandCollaboratorAssignmentList.innerHTML = assignments.length
+    ? assignments.map(brandCollaboratorAssignmentRowTemplate).join("")
+    : `<div class="empty-state compact">Nenhum colaborador atribuído.</div>`;
+  bindAssignmentDeleteButtons(elements.brandCollaboratorAssignmentList);
+}
+
+function bindAssignmentDeleteButtons(container) {
+  container.querySelectorAll("[data-delete-assignment]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await removeCollaboratorBrandAssignment(button.dataset.deleteAssignment);
+    });
+  });
 }
 
 function renderClientDemandList(clientId) {
@@ -3185,6 +3370,113 @@ async function syncCollaboratorsFromSupabase() {
   } catch (error) {
     updatePhase12Debug("collaborators", `erro: ${error.message || "desconhecido"}`);
     console.log("[SOU Supabase Collaborators] usando colaboradores locais como fallback", error);
+  }
+}
+
+function mapSupabaseCollaboratorBrandAssignmentToLocal(row) {
+  return normalizeCollaboratorBrandAssignment({
+    id: row.id,
+    collaboratorId: row.collaborator_id,
+    brandId: row.brand_id,
+    roleOnBrand: row.role_on_brand,
+    isPrimary: row.is_primary,
+    status: row.status,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  });
+}
+
+async function loadSupabaseCollaboratorBrandAssignments() {
+  if (!canUseSupabaseCollaborators()) return [];
+  const client = getSupabaseClientInstance();
+  const { data, error } = await client
+    .from("collaborator_brand_assignments")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data || []).map(mapSupabaseCollaboratorBrandAssignmentToLocal);
+}
+
+function mapLocalCollaboratorBrandAssignmentToSupabasePayload(assignment) {
+  return {
+    collaborator_id: assignment.collaboratorId,
+    brand_id: assignment.brandId,
+    role_on_brand: assignment.roleOnBrand || null,
+    is_primary: Boolean(assignment.isPrimary),
+    status: assignment.status || "active",
+    start_date: assignment.startDate || null,
+    end_date: assignment.endDate || null,
+    notes: assignment.notes || null,
+  };
+}
+
+async function saveCollaboratorBrandAssignmentToSupabase(assignment) {
+  if (!canUseSupabaseCollaborators()) return null;
+  const client = getSupabaseClientInstance();
+  const payload = mapLocalCollaboratorBrandAssignmentToSupabasePayload(assignment);
+  // TODO remove debug after collaborators phase.
+  console.log("[SOU Debug Assignments] save attempt", {
+    collaboratorId: payload.collaborator_id,
+    brandId: payload.brand_id,
+    status: payload.status,
+    isPrimary: payload.is_primary,
+  });
+  const { data, error } = await client
+    .from("collaborator_brand_assignments")
+    .upsert(payload, { onConflict: "collaborator_id,brand_id" })
+    .select("*")
+    .single();
+
+  if (error) {
+    updatePhase12Debug("collaboratorBrandAssignments", `save erro: ${error.message || "desconhecido"}`);
+    throw error;
+  }
+
+  updatePhase12Debug("collaboratorBrandAssignments", `vinculo salvo: ${data.id}`);
+  return mapSupabaseCollaboratorBrandAssignmentToLocal(data);
+}
+
+async function deleteCollaboratorBrandAssignmentFromSupabase(assignmentId) {
+  if (!canUseSupabaseCollaborators() || !assignmentId) return;
+  const client = getSupabaseClientInstance();
+  // TODO remove debug after collaborators phase.
+  console.log("[SOU Debug Assignments] delete attempt", { assignmentId });
+  const { error } = await client.from("collaborator_brand_assignments").delete().eq("id", assignmentId);
+
+  if (error) {
+    updatePhase12Debug("collaboratorBrandAssignments", `delete erro: ${error.message || "desconhecido"}`);
+    throw error;
+  }
+
+  updatePhase12Debug("collaboratorBrandAssignments", `vinculo removido: ${assignmentId}`);
+}
+
+async function syncCollaboratorBrandAssignmentsFromSupabase() {
+  try {
+    if (!canUseSupabaseCollaborators() || !window.SOU_SUPABASE_AUTH?.getCurrentSession) {
+      updatePhase12Debug("collaboratorBrandAssignments", "sem config/auth api");
+      return;
+    }
+    const { session } = await window.SOU_SUPABASE_AUTH.getCurrentSession();
+    if (!session) {
+      updatePhase12Debug("collaboratorBrandAssignments", "sem sessao Supabase");
+      return;
+    }
+
+    const remoteAssignments = await loadSupabaseCollaboratorBrandAssignments();
+    state.collaboratorBrandAssignments = remoteAssignments;
+    state.collaboratorBrandAssignmentsSource = "supabase";
+    updatePhase12Debug("collaboratorBrandAssignments", `ok: ${remoteAssignments.length} vinculos`);
+    saveState();
+    render();
+  } catch (error) {
+    state.collaboratorBrandAssignmentsSource = "local";
+    updatePhase12Debug("collaboratorBrandAssignments", `aguardando migration 015: ${error.message || "desconhecido"}`);
+    console.log("[SOU Supabase Assignments] vinculos colaborador > marca ainda indisponiveis", error);
   }
 }
 
@@ -3826,6 +4118,83 @@ async function deletePerson() {
   selectedPersonId = "todos";
   elements.personDialog.close();
   render();
+}
+
+async function savePersonBrandAssignment() {
+  if (!isAdminAccess()) return;
+  const person = getOwner(elements.personId.value);
+  const brand = getBrand(elements.personAssignmentBrand.value);
+  if (!person?.supabaseId || !brand) {
+    alert("Salve um colaborador Supabase e selecione uma marca antes de vincular.");
+    return;
+  }
+
+  try {
+    await saveCollaboratorBrandAssignmentToSupabase(
+      normalizeCollaboratorBrandAssignment({
+        collaboratorId: person.supabaseId,
+        brandId: getBrandSupabaseId(brand.id),
+        roleOnBrand: elements.personAssignmentRole.value.trim(),
+        status: elements.personAssignmentStatus.value || "active",
+        isPrimary: elements.personAssignmentIsPrimary.checked,
+      }),
+    );
+    await syncCollaboratorBrandAssignmentsFromSupabase();
+    renderPersonAssignmentControls(person.id);
+    renderPersonBrandAssignmentList(person.id);
+  } catch (error) {
+    // TODO remove debug after collaborators phase.
+    console.error("[SOU Ops] Falha ao vincular colaborador a marca.", error);
+    alert(`Erro ao vincular marca: ${error.message || "erro desconhecido"}`);
+  }
+}
+
+async function saveBrandCollaboratorAssignment() {
+  if (!isAdminAccess()) return;
+  const brand = getBrand(elements.brandId.value);
+  const person = getOwner(elements.brandAssignmentCollaborator.value);
+  if (!brand?.supabaseId || !person?.supabaseId) {
+    alert("Selecione uma marca Supabase e um colaborador Supabase antes de vincular.");
+    return;
+  }
+
+  try {
+    await saveCollaboratorBrandAssignmentToSupabase(
+      normalizeCollaboratorBrandAssignment({
+        collaboratorId: person.supabaseId,
+        brandId: getBrandSupabaseId(brand.id),
+        roleOnBrand: elements.brandAssignmentRole.value.trim(),
+        status: elements.brandAssignmentStatus.value || "active",
+        isPrimary: elements.brandAssignmentIsPrimary.checked,
+      }),
+    );
+    await syncCollaboratorBrandAssignmentsFromSupabase();
+    renderBrandAssignmentControls(brand.id);
+    renderBrandCollaboratorAssignmentList(brand.id);
+  } catch (error) {
+    // TODO remove debug after collaborators phase.
+    console.error("[SOU Ops] Falha ao vincular marca a colaborador.", error);
+    alert(`Erro ao vincular colaborador: ${error.message || "erro desconhecido"}`);
+  }
+}
+
+async function removeCollaboratorBrandAssignment(assignmentId) {
+  if (!isAdminAccess() || !assignmentId) return;
+  const assignment = (state.collaboratorBrandAssignments || []).find((item) => item.id === assignmentId);
+  if (!assignment) return;
+  if (!confirm("Remover este vínculo entre colaborador e marca?")) return;
+
+  try {
+    await deleteCollaboratorBrandAssignmentFromSupabase(assignmentId);
+    state.collaboratorBrandAssignments = (state.collaboratorBrandAssignments || []).filter((item) => item.id !== assignmentId);
+    await syncCollaboratorBrandAssignmentsFromSupabase();
+    if (elements.personDialog.open) renderPersonBrandAssignmentList(elements.personId.value);
+    if (elements.brandDialog.open) renderBrandCollaboratorAssignmentList(elements.brandId.value);
+  } catch (error) {
+    // TODO remove debug after collaborators phase.
+    console.error("[SOU Ops] Falha ao remover vinculo colaborador > marca.", error);
+    alert(`Erro ao remover vínculo: ${error.message || "erro desconhecido"}`);
+  }
 }
 
 function saveDemand(event) {
@@ -4635,6 +5004,7 @@ elements.addClientDemandButton.addEventListener("click", openDemandFromClient);
 elements.addBrandButton.addEventListener("click", () => openBrandDialog());
 elements.brandForm.addEventListener("submit", saveBrand);
 elements.deleteBrandButton.addEventListener("click", deleteBrand);
+elements.saveBrandCollaboratorAssignmentButton.addEventListener("click", saveBrandCollaboratorAssignment);
 elements.addContractButton.addEventListener("click", () => openContractDialog());
 elements.contractForm.addEventListener("submit", saveContract);
 elements.deleteContractButton.addEventListener("click", deleteContract);
@@ -4646,6 +5016,7 @@ elements.addDemandButton.addEventListener("click", () => openDemandDialog());
 elements.addProcessButton.addEventListener("click", () => openProcessDialog());
 elements.personForm.addEventListener("submit", savePerson);
 elements.savePersonButton.addEventListener("click", savePerson);
+elements.savePersonBrandAssignmentButton.addEventListener("click", savePersonBrandAssignment);
 elements.demandForm.addEventListener("submit", saveDemand);
 elements.processForm.addEventListener("submit", saveProcess);
 elements.roleForm.addEventListener("submit", saveRole);

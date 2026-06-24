@@ -225,6 +225,13 @@ button {
   color: var(--danger);
 }
 
+.ghost-button.compact {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
 .icon-button {
   display: inline-grid;
   place-items: center;
@@ -334,8 +341,9 @@ button {
 
 label {
   display: grid;
-  gap: 7px;
-  margin-bottom: 14px;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 0;
   color: var(--muted);
   font-size: 13px;
   font-weight: 700;
@@ -349,8 +357,15 @@ textarea {
   border-radius: 8px;
   background: #fff;
   color: var(--text);
-  padding: 11px 12px;
+  min-height: 44px;
+  padding: 12px 13px;
   outline: none;
+}
+
+textarea {
+  min-height: 112px;
+  line-height: 1.5;
+  resize: vertical;
 }
 
 input:focus,
@@ -898,15 +913,24 @@ textarea:focus {
 }
 
 dialog {
-  width: min(560px, calc(100vw - 28px));
+  width: min(760px, calc(100vw - 48px));
+  max-width: 760px;
+  max-height: min(90vh, 900px);
   border: 0;
   border-radius: 10px;
   padding: 0;
   box-shadow: 0 30px 90px rgba(32, 33, 36, 0.25);
+  overflow: hidden;
+}
+
+dialog.wide-dialog {
+  width: min(1040px, calc(100vw - 48px));
+  max-width: 1040px;
 }
 
 dialog.person-dialog {
-  width: min(900px, calc(100vw - 28px));
+  width: min(1100px, calc(100vw - 48px));
+  max-width: 1100px;
 }
 
 dialog::backdrop {
@@ -915,18 +939,19 @@ dialog::backdrop {
 
 .modal-form {
   display: grid;
-  gap: 14px;
-  padding: 20px;
+  gap: 18px;
+  width: 100%;
+  max-height: min(90vh, 900px);
+  overflow: auto;
+  padding: 28px;
 }
 
 .modal-form.wide {
-  width: min(720px, calc(100vw - 28px));
+  width: 100%;
 }
 
 .modal-form.person-form {
   width: 100%;
-  max-height: min(86vh, 840px);
-  overflow: auto;
 }
 
 .modal-header {
@@ -934,21 +959,28 @@ dialog::backdrop {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 4px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: clamp(20px, 2vw, 26px);
+  line-height: 1.2;
 }
 
 .field-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 16px;
 }
 
 .form-section {
   display: grid;
-  gap: 12px;
+  gap: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-soft);
-  padding: 14px;
+  padding: 18px;
 }
 
 .form-section h3 {
@@ -958,8 +990,16 @@ dialog::backdrop {
 }
 
 .modal-actions {
+  position: sticky;
+  z-index: 2;
+  bottom: -28px;
   justify-content: space-between;
   flex-wrap: wrap;
+  margin: 2px -28px -28px;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+  padding: 16px 28px;
+  backdrop-filter: blur(10px);
 }
 
 .template-actions {
@@ -987,11 +1027,11 @@ dialog::backdrop {
 
 .client-demand-panel {
   display: grid;
-  gap: 10px;
+  gap: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-soft);
-  padding: 12px;
+  padding: 18px;
 }
 
 .panel-header.compact {
@@ -1024,6 +1064,11 @@ dialog::backdrop {
   text-align: left;
 }
 
+.client-demand-row > span:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .client-demand-row strong,
 .client-demand-row small {
   display: block;
@@ -1048,6 +1093,20 @@ dialog::backdrop {
 }
 
 .checkbox-row input {
+  width: auto;
+}
+
+.checkbox-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin: 0;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.checkbox-line input {
   width: auto;
 }
 
@@ -1145,6 +1204,30 @@ dialog::backdrop {
   .people-check-grid {
     grid-template-columns: 1fr;
   }
+
+  dialog,
+  dialog.wide-dialog,
+  dialog.person-dialog {
+    width: min(100vw - 20px, 100%);
+    max-width: none;
+    max-height: calc(100vh - 20px);
+  }
+
+  .modal-form {
+    max-height: calc(100vh - 20px);
+    padding: 18px;
+  }
+
+  .modal-actions {
+    bottom: -18px;
+    margin: 2px -18px -18px;
+    padding: 14px 18px;
+  }
+
+  .form-section,
+  .client-demand-panel {
+    padding: 14px;
+  }
 }
 
 @media (max-width: 1180px) {
@@ -1163,10 +1246,6 @@ dialog::backdrop {
   .person-actions {
     grid-column: 2;
     justify-self: start;
-  }
-
-  .modal-form.person-form {
-    width: calc(100vw - 24px);
   }
 
   .field-grid {
