@@ -978,6 +978,7 @@ const elements = {
   clientServices: document.querySelector("#clientServices"),
   clientNotes: document.querySelector("#clientNotes"),
   clientProjectPeople: document.querySelector("#clientProjectPeople"),
+  clientContractList: document.querySelector("#clientContractList"),
   clientDemandList: document.querySelector("#clientDemandList"),
   addClientDemandButton: document.querySelector("#addClientDemandButton"),
   deleteClientButton: document.querySelector("#deleteClientButton"),
@@ -991,6 +992,7 @@ const elements = {
   brandSegment: document.querySelector("#brandSegment"),
   brandNotesInternal: document.querySelector("#brandNotesInternal"),
   brandNotesClient: document.querySelector("#brandNotesClient"),
+  brandContractList: document.querySelector("#brandContractList"),
   deleteBrandButton: document.querySelector("#deleteBrandButton"),
   contractDialog: document.querySelector("#contractDialog"),
   contractForm: document.querySelector("#contractForm"),
@@ -2658,6 +2660,7 @@ function openClientDialog(clientId = "") {
   elements.clientServices.value = (client?.services || []).join("\n");
   elements.clientNotes.value = client?.notes || "";
   renderClientProjectPeople(client);
+  renderClientContractList(client?.id || "");
   renderClientDemandList(client?.id || "");
   elements.clientDialogTitle.textContent = client ? "Editar cliente" : "Novo cliente";
   elements.deleteClientButton.hidden = !client;
@@ -2681,6 +2684,7 @@ function openBrandDialog(brandId = "") {
   elements.brandSegment.value = brand?.segment || "";
   elements.brandNotesInternal.value = brand?.notesInternal || "";
   elements.brandNotesClient.value = brand?.notesClient || "";
+  renderBrandContractList(brand?.id || "");
   elements.brandDialogTitle.textContent = brand ? "Editar marca" : "Nova marca";
   setBrandDialogAccess(Boolean(brand));
   elements.brandDialog.showModal();
@@ -2786,6 +2790,67 @@ function renderClientProjectPeople(client) {
       `,
     )
     .join("");
+}
+
+function renderClientContractList(clientId) {
+  const contracts = clientId
+    ? getClientContracts(clientId).sort((a, b) => String(a.status).localeCompare(String(b.status)) || String(a.name).localeCompare(String(b.name)))
+    : [];
+
+  elements.clientContractList.innerHTML = clientId
+    ? contracts.length
+      ? contracts.map(clientContractRowTemplate).join("")
+      : `<div class="empty-state compact">Nenhum contrato vinculado.</div>`
+    : `<div class="empty-state compact">Salve o cliente para visualizar contratos.</div>`;
+}
+
+function renderBrandContractList(brandId) {
+  const contracts = brandId
+    ? getBrandContracts(brandId).sort((a, b) => String(a.status).localeCompare(String(b.status)) || String(a.name).localeCompare(String(b.name)))
+    : [];
+
+  elements.brandContractList.innerHTML = brandId
+    ? contracts.length
+      ? contracts.map(brandContractRowTemplate).join("")
+      : `<div class="empty-state compact">Nenhum contrato vinculado.</div>`
+    : `<div class="empty-state compact">Salve a marca para visualizar contratos.</div>`;
+}
+
+function clientContractRowTemplate(contract) {
+  const brands = getContractBrands(contract);
+  const statusLabel = contractStatusLabels[contract.status] || contract.status || "Sem status";
+  const statusClass = getContractStatusClass(contract.status);
+  const brandText = brands.length ? brands.map((brand) => brand.name).join(", ") : "Sem marcas vinculadas";
+  const dateText = `${formatDate(contract.startDate)} - ${formatDate(contract.endDate)}`;
+
+  return `
+    <div class="client-demand-row">
+      <span>
+        <strong>${escapeHtml(contract.name)}</strong>
+        <small>${escapeHtml(brandText)} - ${dateText}</small>
+      </span>
+      <span class="tag ${statusClass}">${escapeHtml(statusLabel)}</span>
+      <span class="tag">${formatCurrency(contract.monthlyValue)}</span>
+    </div>
+  `;
+}
+
+function brandContractRowTemplate(contract) {
+  const client = getClient(contract.clientId);
+  const statusLabel = contractStatusLabels[contract.status] || contract.status || "Sem status";
+  const statusClass = getContractStatusClass(contract.status);
+  const services = (contract.services || []).length ? contract.services.join(", ") : "Sem servicos registrados";
+
+  return `
+    <div class="client-demand-row">
+      <span>
+        <strong>${escapeHtml(contract.name)}</strong>
+        <small>${escapeHtml(client?.name || "Cliente nao vinculado")} - ${escapeHtml(services)}</small>
+      </span>
+      <span class="tag ${statusClass}">${escapeHtml(statusLabel)}</span>
+      <span class="tag">${formatCurrency(contract.monthlyValue)}</span>
+    </div>
+  `;
 }
 
 function renderClientDemandList(clientId) {
