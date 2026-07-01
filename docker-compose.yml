@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: sou-ops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sou_ops}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env local}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - sou_ops_postgres_data:/var/lib/postgresql/data
+    networks:
+      - sou_ops_net
+
+volumes:
+  sou_ops_postgres_data:
+    external: true
+    name: 487e71a7825541e2aba16ee02e1acb3a2f300a1bb1d2c77f09235d23113f6d3a
+
+networks:
+  sou_ops_net:
+    external: true
+    name: sou-ops-net

@@ -1,2 +1,7 @@
 .DS_Store
 .env
+backups/
+*.dump
+*.sql.dump
+*.backup
+node_modules/
