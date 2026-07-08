@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "check": "node --check src/index.js && node --check src/app.js && node --check src/db.js"
+    "check": "node --check src/index.js && node --check src/app.js && node --check src/db.js && node --check scripts/db-check.js && node --check scripts/auth-check.js && node --check scripts/check-health.js && node --check scripts/pivot-preflight.js && node --check scripts/pivot-validate.js",
+    "db:check": "node scripts/db-check.js",
+    "auth:check": "node scripts/auth-check.js",
+    "api:health": "node scripts/check-health.js",
+    "pivot:preflight": "node scripts/pivot-preflight.js",
+    "pivot:validate": "node scripts/pivot-validate.js"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
